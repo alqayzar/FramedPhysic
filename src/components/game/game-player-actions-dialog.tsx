@@ -42,8 +42,10 @@ function GamePlayerActionsDialog(props: GamePlayerActionsDialogProps) {
                 <span>Mes actions</span>
                 <ChevronDown aria-hidden="true" className="size-5 shrink-0 transition-transform group-data-[panel-open]:rotate-180" />
               </CollapsibleTrigger>
-              <CollapsibleContent className="collapsible-panel py-3">
-                <GeneratedActionViewer actions={props.player.actions ?? []} {...selectionProps} />
+              <CollapsibleContent className="collapsible-panel">
+                <div className="py-3">
+                  <GeneratedActionViewer actions={props.player.actions ?? []} {...selectionProps} />
+                </div>
               </CollapsibleContent>
             </Collapsible>
             {props.players.filter((player) => player.id !== props.player.id).map((player) => (
@@ -52,8 +54,10 @@ function GamePlayerActionsDialog(props: GamePlayerActionsDialogProps) {
                   <span className="truncate pr-3">{player.name}</span>
                   <ChevronDown aria-hidden="true" className="size-4 shrink-0 transition-transform group-data-[panel-open]:rotate-180" />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="collapsible-panel py-3">
-                  <GeneratedActionViewer actions={player.actions ?? []} {...selectionProps} />
+                <CollapsibleContent className="collapsible-panel">
+                  <div className="py-3">
+                    <GeneratedActionViewer actions={player.actions ?? []} {...selectionProps} />
+                  </div>
                 </CollapsibleContent>
               </Collapsible>
             ))}

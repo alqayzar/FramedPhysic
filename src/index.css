@@ -175,11 +175,11 @@ body {
 }
 
 .collapsible-panel[data-open] {
-  animation: collapsible-expand 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: collapsible-expand 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .collapsible-panel[data-closed] {
-  animation: collapsible-collapse 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: collapsible-collapse 160ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

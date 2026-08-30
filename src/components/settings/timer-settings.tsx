@@ -125,8 +125,9 @@ function TimerSettings(props: TimerSettingsProps) {
             <ChevronDown aria-hidden="true" className="size-6 transition-transform duration-200 group-data-[panel-open]:rotate-180" />
           </CollapsibleTrigger>
         </h2>
-        <CollapsibleContent className="collapsible-panel px-1 pb-4">
-          <div className="mt-4 grid gap-6">
+        <CollapsibleContent className="collapsible-panel">
+          <div className="px-1 pb-4">
+            <div className="mt-4 grid gap-6">
             <fieldset>
               <legend className="text-base font-black">Pénalité manche perdue</legend>
               <div className="mt-3 grid grid-cols-2 gap-3">
@@ -219,10 +220,11 @@ function TimerSettings(props: TimerSettingsProps) {
                 </label>
               </div>
             </fieldset>
-          </div>
+            </div>
 
-          {isSaving && <p className="mt-4 text-sm font-bold text-game-ink/60">Enregistrement...</p>}
-          {errorMessage && <p className="mt-4 font-bold text-red-700">{errorMessage}</p>}
+            {isSaving && <p className="mt-4 text-sm font-bold text-game-ink/60">Enregistrement...</p>}
+            {errorMessage && <p className="mt-4 font-bold text-red-700">{errorMessage}</p>}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </section>

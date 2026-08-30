@@ -66,19 +66,21 @@ function GameplaySettings(props: GameplaySettingsProps) {
             <ChevronDown aria-hidden="true" className="size-6 transition-transform duration-200 group-data-[panel-open]:rotate-180" />
           </CollapsibleTrigger>
         </h2>
-        <CollapsibleContent className="collapsible-panel px-1 pb-4">
-          <fieldset className="mt-4">
-            <legend className="text-base font-black">Actions par joueur</legend>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <label className="grid gap-1.5 text-sm font-bold">Minimum
-                <input className="h-12 w-full rounded-xl border-4 border-game-ink px-3 text-base font-bold shadow-[0_4px_0_0_#16171d] outline-none focus:ring-4 focus:ring-game-blue/30" inputMode="numeric" min="0" onBlur={handleBlur} onChange={handleMinimumChange} type="number" value={minimum} />
-              </label>
-              <label className="grid gap-1.5 text-sm font-bold">Maximum
-                <input className="h-12 w-full rounded-xl border-4 border-game-ink px-3 text-base font-bold shadow-[0_4px_0_0_#16171d] outline-none focus:ring-4 focus:ring-game-blue/30" inputMode="numeric" min="0" onBlur={handleBlur} onChange={handleMaximumChange} type="number" value={maximum} />
-              </label>
-            </div>
-            {isSaving && <p className="mt-4 text-sm font-bold text-game-ink/60">Enregistrement...</p>}
-          </fieldset>
+        <CollapsibleContent className="collapsible-panel">
+          <div className="px-1 pb-4">
+            <fieldset className="mt-4">
+              <legend className="text-base font-black">Actions par joueur</legend>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <label className="grid gap-1.5 text-sm font-bold">Minimum
+                  <input className="h-12 w-full rounded-xl border-4 border-game-ink px-3 text-base font-bold shadow-[0_4px_0_0_#16171d] outline-none focus:ring-4 focus:ring-game-blue/30" inputMode="numeric" min="0" onBlur={handleBlur} onChange={handleMinimumChange} type="number" value={minimum} />
+                </label>
+                <label className="grid gap-1.5 text-sm font-bold">Maximum
+                  <input className="h-12 w-full rounded-xl border-4 border-game-ink px-3 text-base font-bold shadow-[0_4px_0_0_#16171d] outline-none focus:ring-4 focus:ring-game-blue/30" inputMode="numeric" min="0" onBlur={handleBlur} onChange={handleMaximumChange} type="number" value={maximum} />
+                </label>
+              </div>
+              {isSaving && <p className="mt-4 text-sm font-bold text-game-ink/60">Enregistrement...</p>}
+            </fieldset>
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </section>
