@@ -10,7 +10,7 @@ import { createEmojiImage } from '@/lib/emoji-image'
 import { GAME_ROLES, type GamePlayer } from '@/lib/game-session'
 
 function GameRoute() {
-  const { isGamePlayersLoaded } = useGame()
+  const { gamePlayers, isGamePlayersLoaded } = useGame()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -18,7 +18,7 @@ function GameRoute() {
     navigate('/')
   }
 
-  if (isGamePlayersLoaded && !location.state?.gameLaunch) return <Navigate replace to="/" />
+  if (isGamePlayersLoaded && !location.state?.gameLaunch && gamePlayers.length === 0) return <Navigate replace to="/" />
   return <GamePage onQuit={quitGame} />
 }
 
