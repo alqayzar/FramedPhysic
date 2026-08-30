@@ -230,7 +230,7 @@ function GameBoard(props: GameBoardProps) {
           </span>
         )}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6 pt-3 px-2 pb-48">
         {gamePlayers.map((player) => (
           <GamePlayerCard

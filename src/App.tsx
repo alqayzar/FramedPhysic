@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { ActionsDialog } from '@/components/actions/actions-dialog'
 import { ElementsDialog } from '@/components/elements/elements-dialog'
 import { MainMenu } from '@/components/menu/main-menu'
@@ -8,29 +9,25 @@ import { GameProvider, useGame } from '@/contexts/game-context'
 import { createEmojiImage } from '@/lib/emoji-image'
 import { GAME_ROLES, type GamePlayer } from '@/lib/game-session'
 
+function GameRoute() {
+  const { isGamePlayersLoaded } = useGame()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  function quitGame() {
+    navigate('/')
+  }
+
+  if (isGamePlayersLoaded && !location.state?.gameLaunch) return <Navigate replace to="/" />
+  return <GamePage onQuit={quitGame} />
+}
+
 function GameApp() {
-  const { clearGamePlayers, gameSettings, isGamePlayersLoaded, replaceGamePlayers } = useGame()
+  const { clearGamePlayers, gameSettings, replaceGamePlayers } = useGame()
+  const navigate = useNavigate()
   const [isActionsOpen, setIsActionsOpen] = useState(false)
   const [isElementsOpen, setIsElementsOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [path, setPath] = useState(window.location.pathname)
-
-  useEffect(() => {
-    function handlePopState() {
-      setPath(window.location.pathname)
-    }
-
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
-
-  useEffect(() => {
-    if (path !== '/game' || !isGamePlayersLoaded || window.history.state?.gameLaunch) return
-
-    window.history.replaceState({}, '', '/')
-    setPath('/')
-  }, [isGamePlayersLoaded, path])
-
   function openActions() {
     setIsActionsOpen(true)
   }
@@ -45,13 +42,7 @@ function GameApp() {
 
   async function openGame() {
     await clearGamePlayers()
-    window.history.pushState({ gameLaunch: true }, '', '/game')
-    setPath('/game')
-  }
-
-  function quitGame() {
-    window.history.pushState({}, '', '/')
-    setPath('/')
+    navigate('/game', { state: { gameLaunch: true } })
   }
 
   async function startDebugGame() {
@@ -78,19 +69,22 @@ function GameApp() {
     )
 
     replaceGamePlayers(players)
-    window.history.pushState({ gameLaunch: true }, '', '/game')
-    setPath('/game')
+    navigate('/game', { state: { gameLaunch: true } })
   }
 
-  if (path === '/game') return <GamePage onQuit={quitGame} />
-
   return (
-    <>
-      <MainMenu onDebugStartGame={startDebugGame} onOpenActions={openActions} onOpenElements={openElements} onOpenSettings={openSettings} onStartGame={openGame} />
-      <ActionsDialog onOpenChange={setIsActionsOpen} open={isActionsOpen} />
-      <ElementsDialog onOpenChange={setIsElementsOpen} open={isElementsOpen} />
-      <SettingsDialog onOpenChange={setIsSettingsOpen} open={isSettingsOpen} />
-    </>
+    <Routes>
+      <Route element={<GameRoute />} path="/game" />
+      <Route element={(
+        <>
+          <MainMenu onDebugStartGame={startDebugGame} onOpenActions={openActions} onOpenElements={openElements} onOpenSettings={openSettings} onStartGame={openGame} />
+          <ActionsDialog onOpenChange={setIsActionsOpen} open={isActionsOpen} />
+          <ElementsDialog onOpenChange={setIsElementsOpen} open={isElementsOpen} />
+          <SettingsDialog onOpenChange={setIsSettingsOpen} open={isSettingsOpen} />
+        </>
+      )} path="/" />
+      <Route element={<Navigate replace to="/" />} path="*" />
+    </Routes>
   )
 }
 

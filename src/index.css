@@ -45,10 +45,16 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+html,
+body,
+#root {
+  min-height: 100svh;
+}
+
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  background-color: #fff9e8;
 }
 
 @theme inline {

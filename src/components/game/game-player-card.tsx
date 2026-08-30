@@ -58,16 +58,14 @@ function GamePlayerCard(props: GamePlayerCardProps) {
         </span>
       )}
       {props.isRoleSelectionEnabled && !props.isEliminated && (
-        <div className="absolute right-2 top-2 z-10 flex gap-1.5">
-          <button
-            aria-label={`Voir le rôle de ${props.player.name}`}
-            className="grid size-9 place-items-center rounded-full border-3 border-game-ink bg-game-yellow text-game-ink shadow-[0_3px_0_0_#16171d]"
-            onClick={selectRole}
-            type="button"
-          >
-            <Eye aria-hidden="true" className="size-5" />
-          </button>
-        </div>
+        <button
+          aria-label={`Voir le rôle de ${props.player.name}`}
+          className="absolute -top-3 left-1/2 z-10 grid size-11 -translate-x-1/2 place-items-center rounded-full border-3 border-game-ink bg-game-yellow text-game-ink shadow-[0_3px_0_0_#16171d]"
+          onClick={selectRole}
+          type="button"
+        >
+          <Eye aria-hidden="true" className="size-6" />
+        </button>
       )}
     </article>
   )

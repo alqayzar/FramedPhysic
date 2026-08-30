@@ -76,11 +76,11 @@ function TeamSetup() {
           <div>
             <p className="mb-1 flex items-center justify-center gap-2 text-sm font-black"><GameRoleIcon className="size-6" role={GAME_ROLES[0]} />Innocents</p>
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3">
-              <Button aria-label="Retirer un innocent" className="cartoon-press h-11 rounded-xl border-3 border-game-ink bg-game-red p-2 text-white hover:bg-game-red" disabled={innocents <= 2} onClick={decreaseInnocents} type="button">
+              <Button aria-label="Retirer un innocent" className="cartoon-press h-11 rounded-lg border-3 border-game-ink bg-game-red p-2 text-white hover:bg-game-red" disabled={innocents <= 2} onClick={decreaseInnocents} type="button">
                 <Minus aria-hidden="true" className="size-5" />
               </Button>
-              <input aria-label="Nombre d’innocents" className="h-11 w-full min-w-0 rounded-xl border-3 border-game-ink bg-white text-center text-lg font-black shadow-[0_4px_0_0_#16171d] outline-none focus:ring-4 focus:ring-game-green/30" min="2" onChange={handleInnocentsChange} type="number" value={innocents} />
-              <Button aria-label="Ajouter un innocent" className="cartoon-press h-11 rounded-xl border-3 border-game-ink bg-game-green p-2 text-white hover:bg-game-green" onClick={increaseInnocents} type="button">
+              <input aria-label="Nombre d’innocents" className="h-11 w-full min-w-0 rounded-lg border-3 border-game-ink bg-white text-center text-lg font-black shadow-[0_4px_0_0_#16171d] outline-none focus:ring-4 focus:ring-game-green/30" min="2" onChange={handleInnocentsChange} type="number" value={innocents} />
+              <Button aria-label="Ajouter un innocent" className="cartoon-press h-11 rounded-lg border-3 border-game-ink bg-game-green p-2 text-white hover:bg-game-green" onClick={increaseInnocents} type="button">
                 <Plus aria-hidden="true" className="size-5" />
               </Button>
             </div>
@@ -88,11 +88,11 @@ function TeamSetup() {
           <div>
             <p className="mb-1 flex items-center justify-center gap-2 text-sm font-black"><GameRoleIcon className="size-6" role={GAME_ROLES[1]} />Saboteurs</p>
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3">
-              <Button aria-label="Retirer un saboteur" className="cartoon-press h-11 rounded-xl border-3 border-game-ink bg-game-red p-2 text-white hover:bg-game-red" disabled={saboteurs <= 1} onClick={decreaseSaboteurs} type="button">
+              <Button aria-label="Retirer un saboteur" className="cartoon-press h-11 rounded-lg border-3 border-game-ink bg-game-red p-2 text-white hover:bg-game-red" disabled={saboteurs <= 1} onClick={decreaseSaboteurs} type="button">
                 <Minus aria-hidden="true" className="size-5" />
               </Button>
-              <input aria-label="Nombre de saboteurs" className="h-11 w-full min-w-0 rounded-xl border-3 border-game-ink bg-white text-center text-lg font-black shadow-[0_4px_0_0_#16171d] outline-none focus:ring-4 focus:ring-game-pink/30" max={getMaximumSaboteurs(innocents)} min="1" onChange={handleSaboteursChange} type="number" value={saboteurs} />
-              <Button aria-label="Ajouter un saboteur" className="cartoon-press h-11 rounded-xl border-3 border-game-ink bg-game-green p-2 text-white hover:bg-game-green" disabled={saboteurs >= getMaximumSaboteurs(innocents)} onClick={increaseSaboteurs} type="button">
+              <input aria-label="Nombre de saboteurs" className="h-11 w-full min-w-0 rounded-lg border-3 border-game-ink bg-white text-center text-lg font-black shadow-[0_4px_0_0_#16171d] outline-none focus:ring-4 focus:ring-game-pink/30" max={getMaximumSaboteurs(innocents)} min="1" onChange={handleSaboteursChange} type="number" value={saboteurs} />
+              <Button aria-label="Ajouter un saboteur" className="cartoon-press h-11 rounded-lg border-3 border-game-ink bg-game-green p-2 text-white hover:bg-game-green" disabled={saboteurs >= getMaximumSaboteurs(innocents)} onClick={increaseSaboteurs} type="button">
                 <Plus aria-hidden="true" className="size-5" />
               </Button>
             </div>
