@@ -12,11 +12,17 @@ export interface TeamCounts {
   saboteurs: number
 }
 
+export interface ActionCountRange {
+  min: number
+  max: number
+}
+
 export interface GameSettings {
   roundLossTimeout: TimeoutSettings
   roundTimeout: TimeoutSettings
   turnTimeout: TimeoutSettings
   teamCounts: TeamCounts
+  actionsPerPlayer: ActionCountRange
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -24,6 +30,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   roundTimeout: { minutes: 5, seconds: 0 },
   turnTimeout: { minutes: 1, seconds: 0 },
   teamCounts: { innocents: 2, saboteurs: 1 },
+  actionsPerPlayer: { min: 1, max: 3 },
 }
 
 export async function getGameSettings(): Promise<GameSettings> {
@@ -34,6 +41,7 @@ export async function getGameSettings(): Promise<GameSettings> {
     roundTimeout: { ...DEFAULT_GAME_SETTINGS.roundTimeout, ...settings?.roundTimeout },
     turnTimeout: { ...DEFAULT_GAME_SETTINGS.turnTimeout, ...settings?.turnTimeout },
     teamCounts: { ...DEFAULT_GAME_SETTINGS.teamCounts, ...settings?.teamCounts },
+    actionsPerPlayer: { ...DEFAULT_GAME_SETTINGS.actionsPerPlayer, ...settings?.actionsPerPlayer },
   }
 }
 

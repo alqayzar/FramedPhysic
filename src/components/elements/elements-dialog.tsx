@@ -30,11 +30,15 @@ function ElementsDialog(props: ElementsDialogProps) {
     actionElementsError,
     addActionElement,
     addElementProfile,
+    clearElementProfile,
     deleteActionElement,
     duplicateActionElement,
     deleteElementProfile,
     elementProfiles,
+    exportElementProfile,
+    importElementProfile,
     updateActionElement,
+    updateElementProfile,
   } = useGame()
 
   useEffect(() => {
@@ -89,7 +93,7 @@ function ElementsDialog(props: ElementsDialogProps) {
 
   return (
     <Dialog onOpenChange={handleOpenChange} open={props.open}>
-      <DialogContent className="flex h-[calc(100svh-2rem)] w-[calc(100svw-2rem)] max-h-[calc(100svh-2rem)] max-w-[calc(100svw-2rem)] flex-col gap-0 overflow-hidden rounded-2xl border-4 border-game-ink bg-white p-5 text-game-ink shadow-[0_8px_0_0_#16171d] sm:w-full sm:max-w-3xl sm:p-8">
+      <DialogContent className="flex h-svh w-svw max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 bg-white p-5 text-game-ink shadow-none sm:p-8">
         <DialogHeader className="min-w-0 shrink-0 pr-12">
           <DialogTitle className="text-2xl font-black tracking-[-0.06em] sm:text-3xl">
             Éléments
@@ -99,14 +103,19 @@ function ElementsDialog(props: ElementsDialogProps) {
         <div className="min-h-0 flex-1 overflow-y-auto pr-1 pb-4">
           <ProfileTabs
             activeProfileId={activeProfileId}
+            contentLabel="éléments"
             onAdd={openProfileDialog}
+            onClear={clearElementProfile}
             onDelete={deleteElementProfile}
+            onExport={exportElementProfile}
+            onImport={importElementProfile}
+            onRename={updateElementProfile}
             onSelect={handleProfileSelect}
             profiles={elementProfiles}
           />
-          <div className="mt-3 min-w-0 pr-1 sm:inline-block">
+          <div className="mt-3 w-full min-w-0">
             <Button
-              className="cartoon-press h-auto w-full max-w-full rounded-xl border-4 border-game-ink bg-game-blue px-4 py-3 text-sm font-black text-white hover:bg-game-blue sm:w-auto sm:px-5 sm:text-base"
+              className="cartoon-press h-auto w-full max-w-none rounded-xl border-4 border-game-ink bg-game-blue px-4 py-3 text-sm font-black text-white hover:bg-game-blue sm:px-5 sm:text-base"
               disabled={!activeProfileId}
               onClick={openCreateDialog}
               type="button"
@@ -118,7 +127,7 @@ function ElementsDialog(props: ElementsDialogProps) {
 
           {actionElementsError && <p className="mt-5 font-bold text-red-700">{actionElementsError}</p>}
 
-          <div className="mt-8 grid min-w-0 gap-4 pr-1 pb-1 sm:grid-cols-2">
+          <div className="mt-8 grid w-full min-w-0 gap-4 pb-1 sm:grid-cols-2">
             {actionElements.filter((element) => element.profileId === activeProfileId).map((element) => (
               <ActionElementCard
                 element={element}

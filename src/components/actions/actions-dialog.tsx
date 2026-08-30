@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { ActionDialog } from '@/components/actions/action-dialog'
 import { ActionTemplatePreview } from '@/components/actions/action-template-preview'
+import { GeneratedActionViewer, type GeneratedActionViewerAction } from '@/components/actions/generated-action-viewer'
 import { ProfileDialog } from '@/components/profiles/profile-dialog'
 import { ProfileTabs } from '@/components/profiles/profile-tabs'
 import { Button } from '@/components/ui/button'
@@ -8,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useGame } from '@/contexts/game-context'
 import { type ActionElement } from '@/lib/action-elements'
 import { type GameAction } from '@/lib/game-actions'
-import { generateActionPreview, type GeneratedActionSegment } from '@/lib/action-template'
+import { generateActionPreview } from '@/lib/action-template'
 import { Copy, Plus, Shuffle, Trash2 } from 'lucide-react'
 
 interface ActionsDialogProps {
@@ -16,23 +17,7 @@ interface ActionsDialogProps {
   open: boolean
 }
 
-interface GeneratedPreviewSegment {
-  emoji?: string
-  imageSource?: string
-  title?: string
-  type: GeneratedActionSegment['type']
-  value?: string
-}
-
-interface GeneratedAction {
-  imageSources: string[]
-  preview: GeneratedPreviewSegment[]
-  title: string
-}
-
-interface GeneratedElementViewer {
-  emoji?: string
-  imageSource?: string
+interface GeneratedAction extends GeneratedActionViewerAction {
   title: string
 }
 
@@ -48,7 +33,6 @@ function ActionsDialog(props: ActionsDialogProps) {
   const [editingAction, setEditingAction] = useState<GameAction>()
   const [activeProfileId, setActiveProfileId] = useState<string>()
   const [generatedAction, setGeneratedAction] = useState<GeneratedAction>()
-  const [selectedGeneratedElement, setSelectedGeneratedElement] = useState<GeneratedElementViewer>()
   const {
     actionElements,
     actions,
@@ -56,15 +40,15 @@ function ActionsDialog(props: ActionsDialogProps) {
     actionsError,
     addAction,
     addActionProfile,
+    clearActionProfile,
     deleteAction,
     deleteActionProfile,
     duplicateAction,
+    exportActionProfile,
+    importActionProfile,
     updateAction,
+    updateActionProfile,
   } = useGame()
-
-  useEffect(() => {
-    return () => generatedAction?.imageSources.forEach((source) => URL.revokeObjectURL(source))
-  }, [generatedAction])
 
   useEffect(() => {
     if (!actionProfiles.some((profile) => profile.id === activeProfileId)) setActiveProfileId(actionProfiles[0]?.id)
@@ -134,77 +118,42 @@ function ActionsDialog(props: ActionsDialogProps) {
     const action = actions.find((currentAction) => currentAction.id === actionId)
     if (!action) return
 
-    const imageSources: string[] = []
-    const preview = generateActionPreview(action.template, actionElements).map((segment): GeneratedPreviewSegment => {
-      if (segment.type !== 'element') return segment
-
-      let imageSource = segment.element.imageUrl
-      if (segment.element.image) {
-        imageSource = URL.createObjectURL(segment.element.image)
-        imageSources.push(imageSource)
-      }
-
-      return {
-        emoji: segment.element.emoji,
-        imageSource,
-        title: segment.element.title,
-        type: 'element',
-      }
-    })
-
     setGeneratedAction({
-      imageSources,
-      preview,
+      id: crypto.randomUUID(),
+      segments: generateActionPreview(action.template, actionElements),
       title: action.title || 'Action générée',
     })
-    setSelectedGeneratedElement(undefined)
   }
 
   function handleGeneratedActionOpenChange(open: boolean) {
     if (!open) {
       setGeneratedAction(undefined)
-      setSelectedGeneratedElement(undefined)
     }
-  }
-
-  function handleGeneratedElementClick(event: MouseEvent<HTMLButtonElement>) {
-    const index = Number(event.currentTarget.dataset.previewIndex)
-    const segment = generatedAction?.preview[index]
-    if (Number.isNaN(index) || segment?.type !== 'element' || !segment.title) return
-
-    setSelectedGeneratedElement({
-      emoji: segment.emoji,
-      imageSource: segment.imageSource,
-      title: segment.title,
-    })
-  }
-
-  function handleGeneratedElementViewerOpenChange(open: boolean) {
-    if (!open) setSelectedGeneratedElement(undefined)
-  }
-
-  function closeGeneratedElementViewer() {
-    setSelectedGeneratedElement(undefined)
   }
 
   return (
     <Dialog onOpenChange={handleOpenChange} open={props.open}>
-      <DialogContent className="flex h-[calc(100svh-2rem)] w-[calc(100svw-2rem)] max-h-[calc(100svh-2rem)] max-w-[calc(100svw-2rem)] flex-col gap-0 overflow-hidden rounded-2xl border-4 border-game-ink bg-white p-5 text-game-ink shadow-[0_8px_0_0_#16171d] sm:w-full sm:max-w-3xl sm:p-8">
-        <DialogHeader className="min-w-0 shrink-0 pr-12">
+      <DialogContent className="flex h-svh w-svw max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 bg-white p-5 text-game-ink shadow-none sm:p-8">
+        <DialogHeader className="min-w-0 shrink-0 pr-12 pb-5">
           <DialogTitle className="text-2xl font-black tracking-[-0.06em] sm:text-3xl">Actions</DialogTitle>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto pr-1 pb-4">
           <ProfileTabs
             activeProfileId={activeProfileId}
+            contentLabel="actions"
             onAdd={openProfileDialog}
+            onClear={clearActionProfile}
             onDelete={deleteActionProfile}
+            onExport={exportActionProfile}
+            onImport={importActionProfile}
+            onRename={updateActionProfile}
             onSelect={handleProfileSelect}
             profiles={actionProfiles}
           />
-          <div className="mt-3 min-w-0 pr-1 sm:inline-block">
+          <div className="mt-3 w-full min-w-0">
             <Button
-              className="cartoon-press h-auto w-full max-w-full rounded-xl border-4 border-game-ink bg-game-green px-4 py-3 text-sm font-black text-white hover:bg-game-green sm:w-auto sm:px-5 sm:text-base"
+              className="cartoon-press h-auto w-full max-w-none rounded-xl border-4 border-game-ink bg-game-green px-4 py-3 text-sm font-black text-white hover:bg-game-green sm:px-5 sm:text-base"
               disabled={!activeProfileId}
               onClick={openCreateDialog}
               type="button"
@@ -216,9 +165,9 @@ function ActionsDialog(props: ActionsDialogProps) {
 
           {actionsError && <p className="mt-5 font-bold text-red-700">{actionsError}</p>}
 
-          <div className="mt-8 grid gap-4">
+          <div className="mt-8 grid w-full gap-4">
             {actions.filter((action) => action.profileId === activeProfileId).map((action) => (
-              <article className="rounded-2xl border-4 border-game-ink bg-white p-4 shadow-[0_5px_0_0_#16171d]" key={action.id}>
+              <article className="w-full rounded-2xl border-4 border-game-ink bg-white p-4 shadow-[0_5px_0_0_#16171d]" key={action.id}>
                 <div className="flex min-w-0 items-start gap-2">
                   <button
                     aria-label="Modifier l’action"
@@ -289,54 +238,13 @@ function ActionsDialog(props: ActionsDialogProps) {
         />
         <ProfileDialog onCreate={addActionProfile} onOpenChange={handleProfileDialogOpenChange} open={isProfileDialogOpen} />
         <Dialog onOpenChange={handleGeneratedActionOpenChange} open={Boolean(generatedAction)}>
-          <DialogContent className="w-[calc(100svw-2rem)] rounded-2xl border-4 border-game-ink bg-game-yellow p-6 text-game-ink shadow-[0_8px_0_0_#16171d] sm:max-w-lg">
+          <DialogContent className="w-[calc(100svw-2rem)] max-w-[calc(100svw-2rem)] rounded-2xl border-4 border-game-ink bg-white p-6 text-game-ink shadow-[0_8px_0_0_#16171d] sm:max-w-lg">
             <DialogHeader className="pr-10">
-              <DialogTitle className="break-words text-2xl font-black tracking-[-0.04em]">
-                {generatedAction?.title}
-              </DialogTitle>
+              <DialogTitle className="break-words text-2xl font-black tracking-[-0.06em]">{generatedAction?.title}</DialogTitle>
             </DialogHeader>
-            <p className="mt-5 flex flex-wrap items-center gap-2 break-words text-lg font-bold leading-8">
-              {generatedAction?.preview.map((segment, index) => {
-                if (segment.type === 'text') return <span key={`${segment.value}-${index}`}>{segment.value}</span>
-                if (segment.type === 'unmatched') {
-                  return <span className="rounded-lg border-2 border-game-ink bg-game-red px-2 py-1 text-sm text-white" key={`${segment.value}-${index}`}>{segment.value}</span>
-                }
-
-                return (
-                  <span className="inline-flex shrink-0" key={`${segment.title}-${index}`}>
-                    <button
-                      aria-label={`Afficher ${segment.title}`}
-                      className="inline-flex size-14 overflow-hidden rounded-lg border-3 border-game-ink bg-white"
-                      data-preview-index={index}
-                      onClick={handleGeneratedElementClick}
-                      type="button"
-                    >
-                      {segment.imageSource ? (
-                        <img alt="" className="size-full object-cover" src={segment.imageSource} />
-                      ) : (
-                        <span aria-hidden="true" className="flex size-full items-center justify-center text-3xl">
-                          {segment.emoji || '?'}
-                        </span>
-                      )}
-                    </button>
-                  </span>
-                )
-              })}
-            </p>
-          </DialogContent>
-        </Dialog>
-        <Dialog onOpenChange={handleGeneratedElementViewerOpenChange} open={Boolean(selectedGeneratedElement)}>
-          <DialogContent className="flex h-svh w-svw max-w-none flex-col items-center justify-center gap-6 rounded-none border-0 bg-game-yellow p-8 text-game-ink shadow-none" onClick={closeGeneratedElementViewer}>
-            {selectedGeneratedElement?.imageSource ? (
-              <img alt="" className="max-h-[70svh] max-w-full rounded-2xl border-4 border-game-ink object-contain shadow-[0_8px_0_0_#16171d]" src={selectedGeneratedElement.imageSource} />
-            ) : (
-              <span aria-hidden="true" className="flex size-56 items-center justify-center rounded-2xl border-4 border-game-ink bg-white text-9xl shadow-[0_8px_0_0_#16171d]">
-                {selectedGeneratedElement?.emoji || '?'}
-              </span>
-            )}
-            <DialogTitle className="max-w-full break-words text-center text-3xl font-black tracking-[-0.04em] sm:text-5xl">
-              {selectedGeneratedElement?.title}
-            </DialogTitle>
+            <div className="max-h-[55svh] overflow-y-auto overscroll-contain pr-1">
+              <GeneratedActionViewer actions={generatedAction ? [generatedAction] : []} />
+            </div>
           </DialogContent>
         </Dialog>
       </DialogContent>

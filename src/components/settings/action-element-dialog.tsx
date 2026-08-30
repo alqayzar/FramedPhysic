@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { EmojiPickerDialog } from '@/components/settings/emoji-picker-dialog'
 import { createActionElement, type ActionElement } from '@/lib/action-elements'
 import { createEmojiImage } from '@/lib/emoji-image'
+import { cn } from '@/lib/utils'
 import { Camera, ImagePlus, Smile, Trash2, X } from 'lucide-react'
 
 const ICON_BUTTON_CLASS =
@@ -197,7 +198,7 @@ function ActionElementDialog(props: ActionElementDialogProps) {
             type="file"
           />
 
-          <div className={`mt-6 grid min-w-0 gap-3 ${image || imageUrl ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <div className={cn('mt-6 grid min-w-0 gap-3', (image || imageUrl) && 'grid-cols-4', !image && !imageUrl && 'grid-cols-3')}>
             <Button
               aria-label="Prendre une photo"
               className={`${ICON_BUTTON_CLASS} bg-game-blue text-white hover:bg-game-blue`}

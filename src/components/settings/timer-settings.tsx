@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { type GameSettings, type TeamCounts } from '@/lib/game-settings'
+import { type ActionCountRange, type GameSettings, type TeamCounts } from '@/lib/game-settings'
 import { ChevronDown } from 'lucide-react'
 
 interface TimerSettingsProps {
@@ -22,6 +22,7 @@ function createSettings(
   turnMinutes: string,
   turnSeconds: string,
   teamCounts: TeamCounts,
+  actionsPerPlayer: ActionCountRange,
 ): GameSettings {
   return {
     roundLossTimeout: {
@@ -37,6 +38,7 @@ function createSettings(
       seconds: clamp(turnSeconds, 59),
     },
     teamCounts,
+    actionsPerPlayer,
   }
 }
 
@@ -70,7 +72,7 @@ function TimerSettings(props: TimerSettingsProps) {
     setErrorMessage('')
 
     try {
-      await props.onSave(createSettings(roundLossMinutes, roundLossSeconds, roundMinutes, roundSeconds, turnMinutes, turnSeconds, props.settings.teamCounts))
+      await props.onSave(createSettings(roundLossMinutes, roundLossSeconds, roundMinutes, roundSeconds, turnMinutes, turnSeconds, props.settings.teamCounts, props.settings.actionsPerPlayer))
       if (changeVersion.current === version) setHasChanges(false)
     } catch {
       setErrorMessage('Impossible d’enregistrer les chronomètres.')
@@ -118,7 +120,7 @@ function TimerSettings(props: TimerSettingsProps) {
     <section className="mt-8" aria-labelledby="timers-title">
       <Collapsible defaultOpen>
         <h2 id="timers-title">
-          <CollapsibleTrigger className="group flex w-full items-center justify-between text-xl font-black tracking-[-0.06em] text-game-ink/80 sm:text-2xl">
+          <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-xl border-4 border-game-ink bg-game-yellow px-4 py-3 text-xl font-black tracking-[-0.06em] text-game-ink shadow-[0_5px_0_0_#16171d] sm:text-2xl">
             Chronomètres
             <ChevronDown aria-hidden="true" className="size-6 transition-transform duration-200 group-data-[panel-open]:rotate-180" />
           </CollapsibleTrigger>

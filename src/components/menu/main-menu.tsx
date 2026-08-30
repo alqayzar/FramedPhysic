@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { TeamSetup } from '@/components/menu/team-setup'
 import { Boxes, ListChecks, Settings } from 'lucide-react'
@@ -6,9 +7,35 @@ interface MainMenuProps {
   onOpenActions: () => void
   onOpenElements: () => void
   onOpenSettings: () => void
+  onDebugStartGame: () => void
+  onStartGame: () => void
 }
 
 function MainMenu(props: MainMenuProps) {
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const didLongPress = useRef(false)
+
+  function handleStartPointerDown() {
+    didLongPress.current = false
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true
+      props.onDebugStartGame()
+    }, 650)
+  }
+
+  function clearStartLongPress() {
+    if (longPressTimer.current) window.clearTimeout(longPressTimer.current)
+  }
+
+  function handleStartClick() {
+    if (didLongPress.current) {
+      didLongPress.current = false
+      return
+    }
+
+    props.onStartGame()
+  }
+
   return (
     <main className="game-background flex h-svh flex-col overflow-hidden px-5 py-6 text-game-ink sm:px-8 sm:py-8">
       <header className="shrink-0 text-center">
@@ -46,6 +73,11 @@ function MainMenu(props: MainMenuProps) {
         </Button>
         <Button
           className="cartoon-press cartoon-press-lg h-auto w-full max-w-sm rounded-xl border-4 border-game-ink bg-game-purple px-8 py-4 text-xl font-black text-white hover:bg-game-purple sm:text-2xl"
+          onClick={handleStartClick}
+          onPointerCancel={clearStartLongPress}
+          onPointerDown={handleStartPointerDown}
+          onPointerLeave={clearStartLongPress}
+          onPointerUp={clearStartLongPress}
           type="button"
         >
           Lancer

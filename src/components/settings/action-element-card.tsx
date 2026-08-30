@@ -38,7 +38,7 @@ function ActionElementCard(props: ActionElementCardProps) {
   }
 
   return (
-    <article className="flex min-w-0 flex-col rounded-2xl border-4 border-game-ink bg-white p-4 shadow-[0_5px_0_0_#16171d]">
+    <article className="flex w-full min-w-0 flex-col rounded-2xl border-4 border-game-ink bg-white p-4 shadow-[0_5px_0_0_#16171d]">
       <div className="flex min-w-0 items-start gap-2">
         <button
           aria-label={`Modifier ${element.title}`}

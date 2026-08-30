@@ -49,7 +49,7 @@ function ProfileDialog(props: ProfileDialogProps) {
               value={title}
             />
           </label>
-          <Button className="cartoon-press mt-5 w-full rounded-xl border-4 border-game-ink bg-game-green px-4 py-3 font-black text-white hover:bg-game-green" disabled={!title.trim() || isSaving} type="submit">
+          <Button className="cartoon-press mt-5 h-auto w-full rounded-xl border-4 border-game-ink bg-game-green px-4 py-3 font-black text-white hover:bg-game-green" disabled={!title.trim() || isSaving} type="submit">
             {isSaving ? 'Ajout...' : 'Ajouter le profil'}
           </Button>
         </form>

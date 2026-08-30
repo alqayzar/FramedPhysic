@@ -1,15 +1,16 @@
 export function createEmojiImage(emoji: string): Promise<Blob> {
+  const avatarSize = 512
   const canvas = document.createElement('canvas')
-  canvas.width = 512
-  canvas.height = 512
+  canvas.width = avatarSize
+  canvas.height = avatarSize
 
   const context = canvas.getContext('2d')
   if (!context) return Promise.reject(new Error('Canvas is unavailable.'))
 
-  context.font = '400px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
+  context.font = `${avatarSize * 0.5}px sans-serif`
   context.textAlign = 'center'
   context.textBaseline = 'middle'
-  context.fillText(emoji, 256, 272)
+  context.fillText(emoji, avatarSize / 2, avatarSize / 2 + avatarSize * 0.05)
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((image) => {

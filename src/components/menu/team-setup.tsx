@@ -1,6 +1,8 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
+import { GameRoleIcon } from '@/components/game/game-role-icon'
 import { useGame } from '@/contexts/game-context'
+import { GAME_ROLES } from '@/lib/game-session'
 import { Minus, Plus, Users } from 'lucide-react'
 
 function TeamSetup() {
@@ -72,7 +74,7 @@ function TeamSetup() {
         </div>
         <div className="mt-4 grid gap-3">
           <div>
-            <p className="mb-1 text-sm font-black">Innocents</p>
+            <p className="mb-1 flex items-center justify-center gap-2 text-sm font-black"><GameRoleIcon className="size-6" role={GAME_ROLES[0]} />Innocents</p>
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3">
               <Button aria-label="Retirer un innocent" className="cartoon-press h-11 rounded-xl border-3 border-game-ink bg-game-red p-2 text-white hover:bg-game-red" disabled={innocents <= 2} onClick={decreaseInnocents} type="button">
                 <Minus aria-hidden="true" className="size-5" />
@@ -84,7 +86,7 @@ function TeamSetup() {
             </div>
           </div>
           <div>
-            <p className="mb-1 text-sm font-black">Saboteurs</p>
+            <p className="mb-1 flex items-center justify-center gap-2 text-sm font-black"><GameRoleIcon className="size-6" role={GAME_ROLES[1]} />Saboteurs</p>
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3">
               <Button aria-label="Retirer un saboteur" className="cartoon-press h-11 rounded-xl border-3 border-game-ink bg-game-red p-2 text-white hover:bg-game-red" disabled={saboteurs <= 1} onClick={decreaseSaboteurs} type="button">
                 <Minus aria-hidden="true" className="size-5" />
