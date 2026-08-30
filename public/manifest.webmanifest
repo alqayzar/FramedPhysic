@@ -3,13 +3,14 @@
   "short_name": "Framed",
   "description": "Le jeu des Innocents et des Saboteurs.",
   "lang": "fr",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "theme_color": "#ffd23f",
   "background_color": "#fff9e8",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
