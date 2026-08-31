@@ -100,7 +100,7 @@ function ElementsDialog(props: ElementsDialogProps) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1 pb-4">
+        <div className="shrink-0">
           <ProfileTabs
             activeProfileId={activeProfileId}
             contentLabel="éléments"
@@ -124,10 +124,12 @@ function ElementsDialog(props: ElementsDialogProps) {
               Ajouter un élément
             </Button>
           </div>
+        </div>
 
+        <div className="min-h-0 mt-4 flex-1 overflow-y-auto pr-1 pb-4">
           {actionElementsError && <p className="mt-5 font-bold text-red-700">{actionElementsError}</p>}
 
-          <div className="mt-8 grid w-full min-w-0 gap-4 pb-1 sm:grid-cols-2">
+          <div className="grid w-full min-w-0 gap-4 pb-1 sm:grid-cols-2">
             {actionElements.filter((element) => element.profileId === activeProfileId).map((element) => (
               <ActionElementCard
                 element={element}

@@ -138,7 +138,7 @@ function ActionsDialog(props: ActionsDialogProps) {
           <DialogTitle className="text-2xl font-black tracking-[-0.06em] sm:text-3xl">Actions</DialogTitle>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1 pb-4">
+        <div className="shrink-0">
           <ProfileTabs
             activeProfileId={activeProfileId}
             contentLabel="actions"
@@ -162,10 +162,12 @@ function ActionsDialog(props: ActionsDialogProps) {
               Ajouter une action
             </Button>
           </div>
+        </div>
 
+        <div className="min-h-0 mt-4 flex-1 overflow-y-auto pr-1 pb-4">
           {actionsError && <p className="mt-5 font-bold text-red-700">{actionsError}</p>}
 
-          <div className="mt-8 grid w-full gap-4">
+          <div className="grid w-full gap-4">
             {actions.filter((action) => action.profileId === activeProfileId).map((action) => (
               <article className="w-full rounded-2xl border-4 border-game-ink bg-white p-4 shadow-[0_5px_0_0_#16171d]" key={action.id}>
                 <div className="flex min-w-0 items-start gap-2">

@@ -12,7 +12,7 @@ import { GamePlayerActionsDialog } from '@/components/game/game-player-actions-d
 import { GameTimer } from '@/components/game/game-timer'
 import { useGame } from '@/contexts/game-context'
 import { GAME_ROLES } from '@/lib/game-session'
-import { RefreshCw, Users } from 'lucide-react'
+import { RefreshCw, UsersRound } from 'lucide-react'
 
 interface GameBoardProps {
   onQuit: () => void
@@ -27,6 +27,8 @@ function GameBoard(props: GameBoardProps) {
   const [pendingPlayerId, setPendingPlayerId] = useState<string>()
   const [isRoundEndDialogOpen, setIsRoundEndDialogOpen] = useState(false)
   const [isVotingActionsOpen, setIsVotingActionsOpen] = useState(false)
+  const [isCorruptionInfoOpen, setIsCorruptionInfoOpen] = useState(false)
+  const [isActionsInfoOpen, setIsActionsInfoOpen] = useState(false)
   const [pendingEliminationPlayerId, setPendingEliminationPlayerId] = useState<string>()
 
   useEffect(() => {
@@ -74,9 +76,8 @@ function GameBoard(props: GameBoardProps) {
     const turnTimeout = gameSettings.turnTimeout
     const roundDuration = (roundTimeout.minutes * 60) + roundTimeout.seconds
     const roundLossDuration = (roundLossTimeout.minutes * 60) + roundLossTimeout.seconds
-    const hasLostRound = isVoting && selectedVotingActionIds.length < Math.ceil(votingActions.length / 2)
     setIsRoleSelectionEnabled(false)
-    startGameRound(Math.max(0, roundDuration - (hasLostRound ? roundLossDuration : 0)), (turnTimeout.minutes * 60) + turnTimeout.seconds)
+    startGameRound(roundDuration, (turnTimeout.minutes * 60) + turnTimeout.seconds, roundLossDuration)
   }
 
   function handlePlayerSelect(playerId: string) {
@@ -125,6 +126,7 @@ function GameBoard(props: GameBoardProps) {
     if (!nextPlayer) return
 
     const timeout = gameSettings.turnTimeout
+    setSelectedActionPlayerId(undefined)
     selectActivePlayer(nextPlayer.id, (timeout.minutes * 60) + timeout.seconds)
   }
 
@@ -143,6 +145,7 @@ function GameBoard(props: GameBoardProps) {
 
   async function handleRoundTimerExpiry() {
     await finishGameRound()
+    setSelectedActionPlayerId(undefined)
     setIsRoundEndDialogOpen(false)
   }
 
@@ -169,47 +172,16 @@ function GameBoard(props: GameBoardProps) {
   const totalActions = gamePlayers.reduce((total, player) => total + (player.actions?.length ?? 0), 0)
   const pendingPlayer = gamePlayers.find((player) => player.id === pendingPlayerId)
   const pendingEliminationPlayer = gamePlayers.find((player) => player.id === pendingEliminationPlayerId)
-  const votingActions = gamePlayers.flatMap((player) => player.actions ?? [])
-  const innocentPlayers = gamePlayers.filter((player) => player.role.name !== GAME_ROLES[1].name)
+  const votingActions = gamePlayers.filter((player) => !player.eliminated).flatMap((player) => player.actions ?? [])
+  const innocentPlayers = gamePlayers.filter((player) => player.role.name !== GAME_ROLES[1].name && !player.eliminated)
   const corruptedPlayerCount = innocentPlayers.filter((player) => player.corrupted).length
-
-  if (winnerIds.length > 0) {
-    return (
-      <section className="mx-auto flex h-full max-w-4xl flex-col">
-        <div className="flex flex-row flex-wrap gap-3">
-          <Button className="cartoon-press flex-1 rounded-xl border-4 border-game-ink bg-game-red px-5 py-3 font-black text-white hover:bg-game-red" onClick={quitVictory} type="button">Quitter</Button>
-        </div>
-        <div className="mt-8 flex items-center gap-3">
-          <Users aria-hidden="true" className="size-7" />
-          <h1 className="text-3xl font-black tracking-[-0.06em]">Joueurs</h1>
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 px-2 pt-3 sm:grid-cols-4 lg:grid-cols-6">
-          {gamePlayers.map((player) => (
-            <GamePlayerCard
-              isActive={false}
-              isEliminated={Boolean(player.eliminated)}
-              isRoleSelectionEnabled={false}
-              isRoundRunning={false}
-              isVoting={false}
-              isWinner={winnerIds.includes(player.id)}
-              key={player.id}
-              onRoleSelect={() => {}}
-              player={player}
-            />
-          ))}
-        </div>
-        <div className="fixed inset-x-5 bottom-6 z-20 mx-auto max-w-sm rounded-2xl border-4 border-game-ink bg-game-yellow px-5 py-4 text-center text-2xl font-black shadow-[0_6px_0_0_#16171d] sm:inset-x-8 sm:text-3xl">
-          {winningMessage}
-        </div>
-      </section>
-    )
-  }
+  const isVictory = winnerIds.length > 0
 
   return (
     <section className="mx-auto flex h-full max-w-4xl flex-col">
       <div className="flex flex-row flex-wrap gap-3">
-        <Button className="cartoon-press flex-1 rounded-xl border-4 border-game-ink bg-game-red px-5 py-3 font-black text-white hover:bg-game-red" onClick={openQuitDialog} type="button">Quitter</Button>
-        {!roundEndsAt && !isVoting && (
+        <Button className="cartoon-press flex-1 rounded-xl border-4 border-game-ink bg-game-red px-5 py-3 font-black text-white hover:bg-game-red" onClick={isVictory ? quitVictory : openQuitDialog} type="button">Quitter</Button>
+        {!isVictory && !roundEndsAt && !isVoting && (
           <Button aria-label="Réattribuer les rôles aléatoirement" className="cartoon-press flex-1 rounded-xl border-4 border-game-ink bg-game-blue px-5 py-3 font-black text-white hover:bg-game-blue" onClick={reassignGameRoles} type="button">
             <RefreshCw aria-hidden="true" className="size-5" />
             Réassigner
@@ -217,36 +189,43 @@ function GameBoard(props: GameBoardProps) {
         )}
       </div>
       <div className="mt-8 flex items-center gap-3">
-        <Users aria-hidden="true" className="size-7" />
+        <UsersRound aria-hidden="true" className="size-7" />
         {!roundEndsAt && !isVoting && <h1 className="text-3xl font-black tracking-[-0.06em]">Joueurs</h1>}
         {(roundEndsAt || isVoting) && (
-          <span className="rounded-full border-2 border-game-ink bg-game-red px-2.5 py-1 text-sm font-black text-white shadow-[0_2px_0_0_#16171d]">
+          <button aria-label="Expliquer les joueurs corrompus" className="cartoon-press rounded-full border-2 border-game-ink bg-game-red px-2.5 py-1 text-sm font-black text-white hover:bg-game-red" onClick={() => setIsCorruptionInfoOpen(true)} type="button">
             {corruptedPlayerCount}/{innocentPlayers.length} corrompus
-          </span>
+          </button>
         )}
         {roundEndsAt && (
-          <span className="rounded-full border-2 border-game-ink bg-game-yellow px-2.5 py-1 text-sm font-black shadow-[0_2px_0_0_#16171d]">
+          <button aria-label="Expliquer le nombre d’actions" className="cartoon-press rounded-full border-2 border-game-ink bg-game-yellow px-2.5 py-1 text-sm font-black hover:bg-game-yellow" onClick={() => setIsActionsInfoOpen(true)} type="button">
             {totalActions} {totalActions === 1 ? 'action' : 'actions'}
-          </span>
+          </button>
         )}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 mt-3 overflow-y-auto pr-1">
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6 pt-3 px-2 pb-48">
         {gamePlayers.map((player) => (
           <GamePlayerCard
-            isActive={player.id === activePlayerId}
+            isActive={!isVictory && player.id === activePlayerId}
             isEliminated={Boolean(player.eliminated)}
-            isRoundRunning={Boolean(roundEndsAt)}
-            isVoting={isVoting}
-            isRoleSelectionEnabled={isRoleSelectionEnabled}
+            isRoundRunning={!isVictory && Boolean(roundEndsAt)}
+            isVoting={!isVictory && isVoting}
+            isRoleSelectionEnabled={!isVictory && isRoleSelectionEnabled}
+            isWinner={winnerIds.includes(player.id)}
             key={player.id}
             onRoleSelect={handlePlayerSelect}
             player={player}
+            showRole={isVictory}
           />
         ))}
         </div>
       </div>
-      {roundEndsAt ? (
+      {isVictory && (
+        <div className="fixed inset-x-5 bottom-6 z-20 mx-auto max-w-sm -rotate-1 rounded-2xl border-4 border-game-ink bg-game-yellow px-5 py-4 text-center text-2xl font-black shadow-[0_6px_0_0_#16171d] sm:inset-x-8 sm:text-3xl">
+          {winningMessage}
+        </div>
+      )}
+      {!isVictory && (roundEndsAt ? (
         <div className="fixed inset-x-5 bottom-6 z-20 mx-auto grid max-w-sm gap-3 sm:inset-x-8">
           {turnEndsAt && <GameTimer endsAt={turnEndsAt} label="Temps par tour" onExpire={selectNextPlayer} />}
           <GameTimer endsAt={roundEndsAt} label="Temps de manche" onClick={openRoundEndDialog} onExpire={handleRoundTimerExpiry} />
@@ -269,7 +248,7 @@ function GameBoard(props: GameBoardProps) {
             Go
           </Button>
         </div>
-      )}
+      ))}
       <GameQuitDialog isRoundRunning={Boolean(roundEndsAt) || isVoting} onConfirm={confirmQuit} onOpenChange={handleQuitDialogOpenChange} open={isQuitDialogOpen} />
       {selectedPlayer && (
         <GameRoleDialog onConfirm={closeRoleDialog} open playerName={selectedPlayer.name} role={selectedPlayer.role} />
@@ -280,6 +259,24 @@ function GameBoard(props: GameBoardProps) {
       <GamePlayerSelectionDialog onConfirm={confirmPlayerSelection} onOpenChange={handlePlayerSelectionDialogOpenChange} open={Boolean(pendingPlayer)} player={pendingPlayer} />
       <GameRoundEndDialog onConfirm={confirmRoundEnd} onOpenChange={handleRoundEndDialogOpenChange} open={isRoundEndDialogOpen} />
       <GamePlayerEliminationDialog onConfirm={confirmElimination} onOpenChange={handleEliminationDialogOpenChange} open={Boolean(pendingEliminationPlayer)} player={pendingEliminationPlayer} />
+      <Dialog onOpenChange={setIsCorruptionInfoOpen} open={isCorruptionInfoOpen}>
+        <DialogContent className="w-[calc(100svw-2rem)] max-w-[calc(100svw-2rem)] rounded-2xl border-4 border-game-ink bg-white p-6 text-game-ink shadow-[0_8px_0_0_#16171d] sm:max-w-md">
+          <DialogHeader className="pr-10">
+            <DialogTitle className="text-2xl font-black tracking-[-0.04em]">Joueurs corrompus</DialogTitle>
+            <DialogDescription className="mt-3 font-bold leading-6 text-game-ink/65">Les Saboteurs gagnent lorsqu’ils ont corrompu tous les Innocents.</DialogDescription>
+          </DialogHeader>
+          <Button className="cartoon-press h-auto w-full rounded-xl border-4 border-game-ink bg-game-yellow px-5 py-3 text-lg font-black text-game-ink hover:bg-game-yellow" onClick={() => setIsCorruptionInfoOpen(false)} type="button">Ok</Button>
+        </DialogContent>
+      </Dialog>
+      <Dialog onOpenChange={setIsActionsInfoOpen} open={isActionsInfoOpen}>
+        <DialogContent className="w-[calc(100svw-2rem)] max-w-[calc(100svw-2rem)] rounded-2xl border-4 border-game-ink bg-white p-6 text-game-ink shadow-[0_8px_0_0_#16171d] sm:max-w-md">
+          <DialogHeader className="pr-10">
+            <DialogTitle className="text-2xl font-black tracking-[-0.04em]">Actions de la manche</DialogTitle>
+            <DialogDescription className="mt-3 font-bold leading-6 text-game-ink/65">Ce nombre indique le total des actions distribuées aux joueurs pour cette manche.</DialogDescription>
+          </DialogHeader>
+          <Button className="cartoon-press h-auto w-full rounded-xl border-4 border-game-ink bg-game-yellow px-5 py-3 text-lg font-black text-game-ink hover:bg-game-yellow" onClick={() => setIsActionsInfoOpen(false)} type="button">Ok</Button>
+        </DialogContent>
+      </Dialog>
       <Dialog onOpenChange={handleVotingActionsOpenChange} open={isVotingActionsOpen}>
         <DialogContent className="w-[calc(100svw-2rem)] max-w-[calc(100svw-2rem)] rounded-2xl border-4 border-game-ink bg-white p-6 text-game-ink shadow-[0_8px_0_0_#16171d] sm:max-w-lg">
           <DialogHeader className="pr-10">

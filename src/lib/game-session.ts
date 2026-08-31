@@ -11,6 +11,7 @@ const GAME_CORRUPTED_ACTION_ID_KEY = 'game-corrupted-action-id'
 const GAME_SABOTEUR_HAS_HAD_TURN_KEY = 'game-saboteur-has-had-turn'
 const GAME_WINNER_IDS_KEY = 'game-winner-ids'
 const GAME_WINNING_MESSAGE_KEY = 'game-winning-message'
+const GAME_ROUND_LOSS_PENALTY_KEY = 'game-round-loss-penalty'
 
 export const GAME_ROLES = [
   {
@@ -120,4 +121,12 @@ export async function getGameWinningMessage(): Promise<string> {
 
 export function setGameWinningMessage(message: string): Promise<void> {
   return idbSet(GAME_WINNING_MESSAGE_KEY, message)
+}
+
+export async function getGameRoundLossPenalty(): Promise<number> {
+  return (await idbGet<number>(GAME_ROUND_LOSS_PENALTY_KEY)) ?? 0
+}
+
+export function setGameRoundLossPenalty(penalty: number): Promise<void> {
+  return idbSet(GAME_ROUND_LOSS_PENALTY_KEY, penalty)
 }

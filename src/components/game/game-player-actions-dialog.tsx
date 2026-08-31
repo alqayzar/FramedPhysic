@@ -48,7 +48,7 @@ function GamePlayerActionsDialog(props: GamePlayerActionsDialogProps) {
                 </div>
               </CollapsibleContent>
             </Collapsible>
-            {props.players.filter((player) => player.id !== props.player.id).map((player) => (
+            {props.players.filter((player) => player.id !== props.player.id && !player.eliminated).map((player) => (
               <Collapsible key={player.id}>
                 <CollapsibleTrigger className={cn('group mt-3 flex w-full items-center justify-between py-2 text-left text-sm font-bold', hasCorruptedAction(player) ? 'text-game-red' : 'text-game-ink/55')}>
                   <span className="truncate pr-3">{player.name}</span>

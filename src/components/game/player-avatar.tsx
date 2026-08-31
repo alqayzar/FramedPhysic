@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { UserRound } from 'lucide-react'
 
 interface PlayerAvatarProps {
   className?: string
@@ -30,7 +31,11 @@ function PlayerAvatar(props: PlayerAvatarProps) {
       />
     )
   }
-  return <span aria-label={props.name} className="grid size-full place-items-center text-5xl" role="img">?</span>
+  return (
+    <span aria-label={props.name} className="grid size-full place-items-center text-game-ink/55" role="img">
+      <UserRound aria-hidden="true" className="size-1/2" />
+    </span>
+  )
 }
 
 export { PlayerAvatar }

@@ -8,7 +8,7 @@ import {
   type TeamCounts,
 } from '@/lib/game-settings'
 import { getGameActions, setGameActions as persistGameActions, type GameAction } from '@/lib/game-actions'
-import { GAME_ROLES, getGameActivePlayerId, getGameCorruptedActionId, getGamePlayers, getGameRoundEndsAt, getGameSaboteurHasHadTurn, getGameTurnEndsAt, getGameVoting, getGameVotingActionIds, getGameWinnerIds, getGameWinningMessage, setGameActivePlayerId as persistGameActivePlayerId, setGameCorruptedActionId as persistGameCorruptedActionId, setGamePlayers as persistGamePlayers, setGameRoundEndsAt as persistGameRoundEndsAt, setGameSaboteurHasHadTurn as persistGameSaboteurHasHadTurn, setGameTurnEndsAt as persistGameTurnEndsAt, setGameVoting as persistGameVoting, setGameVotingActionIds as persistGameVotingActionIds, setGameWinnerIds as persistGameWinnerIds, setGameWinningMessage as persistGameWinningMessage, type GamePlayer, type GameRole } from '@/lib/game-session'
+import { GAME_ROLES, getGameActivePlayerId, getGameCorruptedActionId, getGamePlayers, getGameRoundEndsAt, getGameRoundLossPenalty, getGameSaboteurHasHadTurn, getGameTurnEndsAt, getGameVoting, getGameVotingActionIds, getGameWinnerIds, getGameWinningMessage, setGameActivePlayerId as persistGameActivePlayerId, setGameCorruptedActionId as persistGameCorruptedActionId, setGamePlayers as persistGamePlayers, setGameRoundEndsAt as persistGameRoundEndsAt, setGameRoundLossPenalty as persistGameRoundLossPenalty, setGameSaboteurHasHadTurn as persistGameSaboteurHasHadTurn, setGameTurnEndsAt as persistGameTurnEndsAt, setGameVoting as persistGameVoting, setGameVotingActionIds as persistGameVotingActionIds, setGameWinnerIds as persistGameWinnerIds, setGameWinningMessage as persistGameWinningMessage, type GamePlayer, type GameRole } from '@/lib/game-session'
 import { generateActionPreview } from '@/lib/action-template'
 import { createActionProfileExport, createElementProfileExport, dataUrlToBlob, downloadProfileExport, parseProfileExport } from '@/lib/profile-transfer'
 import {
@@ -57,7 +57,7 @@ interface GameContextValue {
   corruptGameAction: (actionId: string, isSelected: boolean) => void
   roundEndsAt?: number
   selectActivePlayer: (playerId: string, turnDuration: number) => void
-  startGameRound: (roundDuration: number, turnDuration: number) => void
+  startGameRound: (roundDuration: number, turnDuration: number, roundLossDuration: number) => void
   turnEndsAt?: number
   winnerIds: string[]
   winningMessage: string
@@ -109,6 +109,7 @@ function GameProvider(props: GameProviderProps) {
   const [hasSaboteurHadTurn, setHasSaboteurHadTurn] = useState(false)
   const [winnerIds, setWinnerIds] = useState<string[]>([])
   const [winningMessage, setWinningMessage] = useState('')
+  const [roundLossPenalty, setRoundLossPenalty] = useState(0)
   const [isGameRoundLoaded, setIsGameRoundLoaded] = useState(false)
   const [isGameSettingsLoaded, setIsGameSettingsLoaded] = useState(false)
   const activePlayer = gamePlayers.find((player) => player.id === activePlayerId)
@@ -133,7 +134,7 @@ function GameProvider(props: GameProviderProps) {
   useEffect(() => {
     let isMounted = true
 
-    void Promise.all([getGameRoundEndsAt(), getGameTurnEndsAt(), getGameActivePlayerId(), getGameVoting(), getGameVotingActionIds(), getGameCorruptedActionId(), getGameSaboteurHasHadTurn(), getGameWinnerIds(), getGameWinningMessage()]).then(([storedRoundEndsAt, storedTurnEndsAt, storedActivePlayerId, storedIsVoting, storedVotingActionIds, storedCorruptedActionId, storedSaboteurHasHadTurn, storedWinnerIds, storedWinningMessage]) => {
+    void Promise.all([getGameRoundEndsAt(), getGameTurnEndsAt(), getGameActivePlayerId(), getGameVoting(), getGameVotingActionIds(), getGameCorruptedActionId(), getGameSaboteurHasHadTurn(), getGameWinnerIds(), getGameWinningMessage(), getGameRoundLossPenalty()]).then(([storedRoundEndsAt, storedTurnEndsAt, storedActivePlayerId, storedIsVoting, storedVotingActionIds, storedCorruptedActionId, storedSaboteurHasHadTurn, storedWinnerIds, storedWinningMessage, storedRoundLossPenalty]) => {
       if (isMounted) {
         setRoundEndsAt(storedRoundEndsAt)
         setTurnEndsAt(storedTurnEndsAt)
@@ -144,6 +145,7 @@ function GameProvider(props: GameProviderProps) {
         setHasSaboteurHadTurn(storedSaboteurHasHadTurn)
         setWinnerIds(storedWinnerIds)
         setWinningMessage(storedWinningMessage)
+        setRoundLossPenalty(storedRoundLossPenalty)
         setIsGameRoundLoaded(true)
       }
     })
@@ -274,6 +276,7 @@ function GameProvider(props: GameProviderProps) {
       setHasSaboteurHadTurn(false)
       setWinnerIds(innocentWinnerIds)
       setWinningMessage('Les innocents ont gagnés !')
+      setRoundLossPenalty(0)
       void Promise.all([
         persistGamePlayers(nextPlayers),
         persistGameActivePlayerId(undefined),
@@ -285,6 +288,7 @@ function GameProvider(props: GameProviderProps) {
         persistGameSaboteurHasHadTurn(false),
         persistGameWinnerIds(innocentWinnerIds),
         persistGameWinningMessage('Les innocents ont gagnés !'),
+        persistGameRoundLossPenalty(0),
       ])
       return
     }
@@ -303,6 +307,7 @@ function GameProvider(props: GameProviderProps) {
     setHasSaboteurHadTurn(false)
     setWinnerIds([])
     setWinningMessage('')
+    setRoundLossPenalty(0)
     await Promise.all([
       persistGamePlayers([]),
       persistGameActivePlayerId(undefined),
@@ -314,6 +319,7 @@ function GameProvider(props: GameProviderProps) {
       persistGameSaboteurHasHadTurn(false),
       persistGameWinnerIds([]),
       persistGameWinningMessage(''),
+      persistGameRoundLossPenalty(0),
     ])
   }
 
@@ -329,6 +335,7 @@ function GameProvider(props: GameProviderProps) {
     setHasSaboteurHadTurn(false)
     setWinnerIds([])
     setWinningMessage('')
+    setRoundLossPenalty(0)
     await Promise.all([
       persistGamePlayers(nextPlayers),
       persistGameActivePlayerId(undefined),
@@ -340,6 +347,7 @@ function GameProvider(props: GameProviderProps) {
       persistGameSaboteurHasHadTurn(false),
       persistGameWinnerIds([]),
       persistGameWinningMessage(''),
+      persistGameRoundLossPenalty(0),
     ])
   }
 
@@ -358,17 +366,19 @@ function GameProvider(props: GameProviderProps) {
     ])
   }
 
-  function startGameRound(roundDuration: number, turnDuration: number) {
+  function startGameRound(roundDuration: number, turnDuration: number, roundLossDuration: number) {
     const now = Date.now()
-    const roundEndsAt = now + (roundDuration * 1000)
-    const turnEndsAt = now + (turnDuration * 1000)
-    const totalActionCount = gamePlayers.reduce((total, player) => total + (player.actions?.length ?? 0), 0)
+    const totalActionCount = gamePlayers.filter((player) => !player.eliminated).reduce((total, player) => total + (player.actions?.length ?? 0), 0)
     const isRoundWon = isVoting && selectedVotingActionIds.length >= Math.ceil(totalActionCount / 2)
+    const hasLostRound = isVoting && !isRoundWon
+    const nextRoundLossPenalty = hasLostRound ? roundLossPenalty + roundLossDuration : 0
+    const roundEndsAt = now + (Math.max(0, roundDuration - nextRoundLossPenalty) * 1000)
+    const turnEndsAt = now + (turnDuration * 1000)
     const playersWithCorruption = isRoundWon && corruptedActionId && selectedVotingActionIds.includes(corruptedActionId)
       ? gamePlayers.map((player) => player.role.name !== GAME_ROLES[1].name && player.actions?.some((action) => action.id === corruptedActionId) ? { ...player, corrupted: true } : player)
       : gamePlayers
-    const innocentPlayers = playersWithCorruption.filter((player) => player.role.name !== GAME_ROLES[1].name)
-    const nextWinnerIds = innocentPlayers.length > 0 && innocentPlayers.every((player) => player.corrupted)
+    const remainingInnocentPlayers = playersWithCorruption.filter((player) => player.role.name !== GAME_ROLES[1].name && !player.eliminated)
+    const nextWinnerIds = remainingInnocentPlayers.every((player) => player.corrupted)
       ? playersWithCorruption.filter((player) => player.role.name === GAME_ROLES[1].name).map((player) => player.id)
       : []
 
@@ -383,6 +393,7 @@ function GameProvider(props: GameProviderProps) {
       setHasSaboteurHadTurn(false)
       setWinnerIds(nextWinnerIds)
       setWinningMessage('Les saboteurs ont gagnés !')
+      setRoundLossPenalty(0)
       void Promise.all([
         persistGamePlayers(playersWithCorruption),
         persistGameActivePlayerId(undefined),
@@ -394,6 +405,7 @@ function GameProvider(props: GameProviderProps) {
         persistGameSaboteurHasHadTurn(false),
         persistGameWinnerIds(nextWinnerIds),
         persistGameWinningMessage('Les saboteurs ont gagnés !'),
+        persistGameRoundLossPenalty(0),
       ])
       return
     }
@@ -411,6 +423,7 @@ function GameProvider(props: GameProviderProps) {
     setHasSaboteurHadTurn(false)
     setWinnerIds([])
     setWinningMessage('')
+    setRoundLossPenalty(nextRoundLossPenalty)
     void persistGamePlayers(nextPlayers)
     void persistGameActivePlayerId(playerId)
     void persistGameRoundEndsAt(roundEndsAt)
@@ -421,6 +434,7 @@ function GameProvider(props: GameProviderProps) {
     void persistGameSaboteurHasHadTurn(false)
     void persistGameWinnerIds([])
     void persistGameWinningMessage('')
+    void persistGameRoundLossPenalty(nextRoundLossPenalty)
   }
 
   function selectActivePlayer(playerId: string, turnDuration: number) {

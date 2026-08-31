@@ -10,6 +10,7 @@ interface GamePlayerCardProps {
   isRoundRunning: boolean
   isVoting: boolean
   isWinner?: boolean
+  showRole?: boolean
   isRoleSelectionEnabled: boolean
   onRoleSelect: (playerId: string) => void
   player: GamePlayer
@@ -47,13 +48,13 @@ function GamePlayerCard(props: GamePlayerCardProps) {
         </div>
         <h2 className="truncate p-2 text-center text-sm font-black" title={props.player.name}>{props.player.name}</h2>
       </button>
-      {props.isEliminated && (
-        <span className="absolute -top-3 left-1/2 z-10 grid size-11 -translate-x-1/2 place-items-center rounded-full border-3 border-game-ink bg-white shadow-[0_3px_0_0_#16171d]">
+      {(props.isEliminated || props.showRole) && (
+        <span className={cn('absolute z-10 grid size-11 -translate-x-1/2 place-items-center rounded-full border-3 border-game-ink bg-white shadow-[0_3px_0_0_#16171d]', props.isWinner ? '-top-3 left-[calc(50%+1rem)]' : '-top-3 left-1/2')}>
           <GameRoleIcon className="size-8" role={props.player.role} />
         </span>
       )}
       {props.isWinner && (
-        <span aria-label={`${props.player.name} a gagné`} className="absolute -top-3 left-1/2 z-10 grid size-11 -translate-x-1/2 place-items-center rounded-full border-3 border-game-ink bg-game-yellow shadow-[0_3px_0_0_#16171d]">
+        <span aria-label={`${props.player.name} a gagné`} className="absolute -top-3 left-[calc(50%-1rem)] z-20 grid size-11 -translate-x-1/2 place-items-center rounded-full border-3 border-game-ink bg-game-yellow shadow-[0_3px_0_0_#16171d]">
           <Crown aria-hidden="true" className={cn('size-7 fill-game-yellow text-game-ink', crownRotation)} />
         </span>
       )}
