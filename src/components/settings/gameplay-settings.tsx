@@ -57,6 +57,10 @@ function GameplaySettings(props: GameplaySettingsProps) {
     }
   }
 
+  async function handleShowRoleAfterEliminationChange(event: ChangeEvent<HTMLInputElement>) {
+    await props.onSave({ ...props.settings, showRoleAfterElimination: event.target.checked })
+  }
+
   return (
     <section className="mt-8" aria-labelledby="gameplay-title">
       <Collapsible defaultOpen>
@@ -80,6 +84,13 @@ function GameplaySettings(props: GameplaySettingsProps) {
               </div>
               {isSaving && <p className="mt-4 text-sm font-bold text-game-ink/60">Enregistrement...</p>}
             </fieldset>
+            <label className="mt-6 flex items-center justify-between gap-4 rounded-xl border-3 border-game-ink bg-white p-4 shadow-[0_3px_0_0_#16171d]">
+              <span className="min-w-0">
+                <span className="block text-base font-black">Afficher le rôle après une élimination</span>
+                <span className="mt-1 block text-sm font-bold leading-5 text-game-ink/65">Lorsqu’un joueur est éliminé, son rôle doit-il être révélé ?</span>
+              </span>
+              <input aria-label="Afficher le rôle après une élimination" checked={props.settings.showRoleAfterElimination} className="size-6 shrink-0 accent-game-purple" onChange={handleShowRoleAfterEliminationChange} type="checkbox" />
+            </label>
           </div>
         </CollapsibleContent>
       </Collapsible>

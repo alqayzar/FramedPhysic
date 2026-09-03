@@ -1,5 +1,6 @@
 import { GeneratedActionViewer } from '@/components/actions/generated-action-viewer'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { GAME_ROLES, type GamePlayer } from '@/lib/game-session'
 import { cn } from '@/lib/utils'
@@ -13,6 +14,11 @@ interface GamePlayerActionsDialogProps {
   open: boolean
   player: GamePlayer
   players: GamePlayer[]
+  roleAction?: {
+    disabled: boolean
+    label: string
+    onClick: () => void
+  }
 }
 
 function GamePlayerActionsDialog(props: GamePlayerActionsDialogProps) {
@@ -34,6 +40,16 @@ function GamePlayerActionsDialog(props: GamePlayerActionsDialogProps) {
         <DialogHeader className="pr-10">
           <DialogTitle className="break-words text-2xl font-black tracking-[-0.06em]">{isSaboteur ? 'Actions' : 'Mes actions'}</DialogTitle>
         </DialogHeader>
+        {props.roleAction && (
+          <Button
+            className={cn('cartoon-press mt-4 h-auto w-full rounded-xl border-4 border-game-ink px-5 py-3 text-lg font-black text-white', props.roleAction.disabled ? 'bg-slate-400 hover:bg-slate-400' : 'bg-game-blue hover:bg-game-blue')}
+            disabled={props.roleAction.disabled}
+            onClick={props.roleAction.onClick}
+            type="button"
+          >
+            {props.roleAction.label}
+          </Button>
+        )}
         {isSaboteur ? (
           <div className="mt-5 max-h-[65svh] overflow-y-auto pr-1">
             {props.canCorruptAction && <p className="mb-3 font-bold text-game-red">Choisis une action à corrompre.</p>}

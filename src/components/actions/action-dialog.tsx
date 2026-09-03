@@ -143,8 +143,9 @@ function ActionDialog(props: ActionDialogProps) {
                 <h3 id="syntax-title" className="text-base font-black">Syntaxe des filtres</h3>
               </div>
               <p className="mt-2 text-sm leading-6 text-game-ink/70">
-                <code className="font-bold text-game-purple">{'{tag1,tag2}'}</code> accepte tag1 ou tag2.{' '}
-                <code className="font-bold text-game-purple">{'{tag1&tag3,tag2}'}</code> accepte tag1 avec tag3, ou tag2.
+                 <code className="font-bold text-game-purple">{'{tag1,tag2}'}</code> accepte tag1 ou tag2.{' '}
+                 <code className="font-bold text-game-purple">{'{tag1&tag3,tag2}'}</code> accepte tag1 avec tag3, ou tag2.{' '}
+                 <code className="font-bold text-game-purple">{'{tag1&-tag2}'}</code> accepte tag1 sans tag2.
               </p>
             </section>
 

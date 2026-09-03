@@ -23,6 +23,8 @@ export interface GameSettings {
   turnTimeout: TimeoutSettings
   teamCounts: TeamCounts
   actionsPerPlayer: ActionCountRange
+  enabledRoleNames: string[]
+  showRoleAfterElimination: boolean
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -31,6 +33,8 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   turnTimeout: { minutes: 1, seconds: 0 },
   teamCounts: { innocents: 2, saboteurs: 1 },
   actionsPerPlayer: { min: 1, max: 3 },
+  enabledRoleNames: ['Innocent', 'Saboteur'],
+  showRoleAfterElimination: true,
 }
 
 export async function getGameSettings(): Promise<GameSettings> {
@@ -42,6 +46,8 @@ export async function getGameSettings(): Promise<GameSettings> {
     turnTimeout: { ...DEFAULT_GAME_SETTINGS.turnTimeout, ...settings?.turnTimeout },
     teamCounts: { ...DEFAULT_GAME_SETTINGS.teamCounts, ...settings?.teamCounts },
     actionsPerPlayer: { ...DEFAULT_GAME_SETTINGS.actionsPerPlayer, ...settings?.actionsPerPlayer },
+    enabledRoleNames: settings?.enabledRoleNames ?? DEFAULT_GAME_SETTINGS.enabledRoleNames,
+    showRoleAfterElimination: settings?.showRoleAfterElimination ?? DEFAULT_GAME_SETTINGS.showRoleAfterElimination,
   }
 }
 

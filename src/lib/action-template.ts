@@ -62,6 +62,9 @@ export function validateActionTemplate(template: string): string | undefined {
     if (segment.filter.alternatives.some((alternative) => alternative.length === 0)) {
       return 'Chaque alternative doit contenir au moins un tag.'
     }
+    if (segment.filter.alternatives.some((alternative) => alternative.some((tag) => tag === '-'))) {
+      return 'Un tag exclu doit avoir un nom.'
+    }
   }
 
   return undefined
@@ -73,7 +76,9 @@ export function generateActionPreview(template: string, elements: ActionElement[
       if (segment.type === 'text') return segment.value
 
       const matchingElements = elements.filter((element) =>
-        segment.filter.alternatives.some((alternative) => alternative.every((tag) => element.tags.includes(tag))),
+        segment.filter.alternatives.some((alternative) => alternative.every((tag) => (
+          tag.startsWith('-') ? !element.tags.includes(tag.slice(1)) : element.tags.includes(tag)
+        ))),
       )
       const selectedElement = matchingElements[Math.floor(Math.random() * matchingElements.length)]
 
@@ -81,5 +86,16 @@ export function generateActionPreview(template: string, elements: ActionElement[
       return { type: 'unmatched' as const, value: `Aucun élément pour ${segment.filter.raw}` }
     })
     .map((segment) => (typeof segment === 'string' ? { type: 'text' as const, value: segment } : segment))
+}
+
+export function getGeneratedActionEqualityKey(segments: GeneratedActionSegment[]): string {
+  return JSON.stringify(segments.map((segment) => {
+    if (segment.type === 'element') return ['element', segment.element.id]
+    return [segment.type, segment.value]
+  }))
+}
+
+export function areGeneratedActionsEqual(first: GeneratedActionSegment[], second: GeneratedActionSegment[]): boolean {
+  return getGeneratedActionEqualityKey(first) === getGeneratedActionEqualityKey(second)
 }
 import { type ActionElement } from '@/lib/action-elements'

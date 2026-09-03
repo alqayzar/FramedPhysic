@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { GameRoleIcon } from '@/components/game/game-role-icon'
+import { RolesDialog } from '@/components/menu/roles-dialog'
 import { useGame } from '@/contexts/game-context'
 import { GAME_ROLES } from '@/lib/game-session'
 import { Minus, Plus, Users } from 'lucide-react'
@@ -8,7 +9,8 @@ import { Minus, Plus, Users } from 'lucide-react'
 function TeamSetup() {
   const [innocents, setInnocents] = useState(2)
   const [saboteurs, setSaboteurs] = useState(1)
-  const { gameSettings, saveTeamCounts } = useGame()
+  const [isRolesDialogOpen, setIsRolesDialogOpen] = useState(false)
+  const { gameSettings, saveGameSettings, saveTeamCounts } = useGame()
 
   useEffect(() => {
     setInnocents(gameSettings.teamCounts.innocents)
@@ -65,14 +67,30 @@ function TeamSetup() {
     persistTeamCounts(innocents, count)
   }
 
+  function handleRolesDialogOpenChange(open: boolean) {
+    setIsRolesDialogOpen(open)
+  }
+
+  function handleSelectedRoleNamesChange(enabledRoleNames: string[]) {
+    void saveGameSettings({ ...gameSettings, enabledRoleNames })
+  }
+
   return (
-    <section className="w-full max-w-sm" aria-label="Composition des équipes">
+    <section className="relative w-full max-w-sm" aria-label="Composition des équipes">
+      <button aria-label="Afficher les rôles" className="cartoon-press absolute -top-5 left-4 z-10 inline-flex items-center gap-1.5 rounded-full border-3 border-game-ink bg-white px-2.5 py-1 text-md font-black shadow-[0_3px_0_0_#16171d]" onClick={() => setIsRolesDialogOpen(true)} type="button">
+        <Users aria-hidden="true" className="size-6" />
+        {innocents + saboteurs}
+      </button>
+      <Button className="cartoon-press absolute -top-5 right-4 z-10 h-auto rounded-full border-3 border-game-ink bg-game-purple px-3 py-1 text-md font-black text-white hover:bg-game-purple" onClick={() => setIsRolesDialogOpen(true)} type="button">
+        <span>Rôles</span>
+        <span className="flex -space-x-1" aria-hidden="true">
+          {GAME_ROLES.filter((role) => gameSettings.enabledRoleNames.includes(role.name)).map((role) => (
+            <GameRoleIcon className="size-5 border-2 border-black bg-white rounded-full" key={role.name} role={role} />
+          ))}
+        </span>
+      </Button>
       <div className="rounded-2xl border-4 border-game-ink bg-game-yellow p-4 text-center shadow-[0_5px_0_0_#16171d]">
-        <div className="flex items-center justify-center gap-2">
-          <Users aria-hidden="true" className="size-5" />
-          <p className="text-sm font-black uppercase tracking-wide">{innocents + saboteurs} joueurs</p>
-        </div>
-        <div className="mt-4 grid gap-3">
+        <div className="grid gap-3">
           <div>
             <p className="mb-1 flex items-center justify-center gap-2 text-sm font-black"><GameRoleIcon className="size-6" role={GAME_ROLES[0]} />Innocents</p>
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3">
@@ -99,6 +117,7 @@ function TeamSetup() {
           </div>
         </div>
       </div>
+      <RolesDialog onOpenChange={handleRolesDialogOpenChange} onSelectedRoleNamesChange={handleSelectedRoleNamesChange} open={isRolesDialogOpen} selectedRoleNames={gameSettings.enabledRoleNames} />
     </section>
   )
 }

@@ -9,7 +9,11 @@ import { GameProvider, useGame } from '@/contexts/game-context'
 import { createEmojiImage } from '@/lib/emoji-image'
 import { GAME_ROLES, type GamePlayer } from '@/lib/game-session'
 
-function GameRoute() {
+interface GameRouteProps {
+  onOpenSettings: () => void
+}
+
+function GameRoute(props: GameRouteProps) {
   const { gamePlayers, isGamePlayersLoaded } = useGame()
   const location = useLocation()
   const navigate = useNavigate()
@@ -19,7 +23,7 @@ function GameRoute() {
   }
 
   if (isGamePlayersLoaded && !location.state?.gameLaunch && gamePlayers.length === 0) return <Navigate replace to="/" />
-  return <GamePage onQuit={quitGame} />
+  return <GamePage onOpenSettings={props.onOpenSettings} onQuit={quitGame} />
 }
 
 function GameApp() {
@@ -47,8 +51,11 @@ function GameApp() {
 
   async function startDebugGame() {
     await clearGamePlayers()
+    const analystRole = GAME_ROLES[2]
+    const innocentRoles = Array(gameSettings.teamCounts.innocents).fill(GAME_ROLES[0])
+    if (gameSettings.enabledRoleNames.includes(analystRole.name)) innocentRoles[0] = analystRole
     const roles = [
-      ...Array(gameSettings.teamCounts.innocents).fill(GAME_ROLES[0]),
+      ...innocentRoles,
       ...Array(gameSettings.teamCounts.saboteurs).fill(GAME_ROLES[1]),
     ]
     const names = ['Alex', 'Camille', 'Charlie', 'Dorian', 'Élise', 'Franck', 'Gaël', 'Inès', 'Jules', 'Lina', 'Malo', 'Nora']
@@ -73,18 +80,20 @@ function GameApp() {
   }
 
   return (
-    <Routes>
-      <Route element={<GameRoute />} path="/game" />
-      <Route element={(
-        <>
-          <MainMenu onDebugStartGame={startDebugGame} onOpenActions={openActions} onOpenElements={openElements} onOpenSettings={openSettings} onStartGame={openGame} />
-          <ActionsDialog onOpenChange={setIsActionsOpen} open={isActionsOpen} />
-          <ElementsDialog onOpenChange={setIsElementsOpen} open={isElementsOpen} />
-          <SettingsDialog onOpenChange={setIsSettingsOpen} open={isSettingsOpen} />
-        </>
-      )} path="/" />
-      <Route element={<Navigate replace to="/" />} path="*" />
-    </Routes>
+    <>
+      <Routes>
+        <Route element={<GameRoute onOpenSettings={openSettings} />} path="/game" />
+        <Route element={(
+          <>
+            <MainMenu onDebugStartGame={startDebugGame} onOpenActions={openActions} onOpenElements={openElements} onOpenSettings={openSettings} onStartGame={openGame} />
+            <ActionsDialog onOpenChange={setIsActionsOpen} open={isActionsOpen} />
+            <ElementsDialog onOpenChange={setIsElementsOpen} open={isElementsOpen} />
+          </>
+        )} path="/" />
+        <Route element={<Navigate replace to="/" />} path="*" />
+      </Routes>
+      <SettingsDialog onOpenChange={setIsSettingsOpen} open={isSettingsOpen} />
+    </>
   )
 }
 

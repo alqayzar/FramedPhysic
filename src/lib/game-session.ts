@@ -1,5 +1,8 @@
 import { type GeneratedActionSegment } from '@/lib/action-template'
 import { idbGet, idbSet } from '@/lib/idb-store'
+import analystIcon from '@/assets/roles/analyst.svg?url'
+import innocentIcon from '@/assets/roles/innocent.svg?url'
+import saboteurIcon from '@/assets/roles/saboteur.svg?url'
 
 const GAME_PLAYERS_KEY = 'game-players'
 const GAME_ACTIVE_PLAYER_KEY = 'game-active-player'
@@ -12,19 +15,59 @@ const GAME_SABOTEUR_HAS_HAD_TURN_KEY = 'game-saboteur-has-had-turn'
 const GAME_WINNER_IDS_KEY = 'game-winner-ids'
 const GAME_WINNING_MESSAGE_KEY = 'game-winning-message'
 const GAME_ROUND_LOSS_PENALTY_KEY = 'game-round-loss-penalty'
+const GAME_ROLE_ABILITY_USES_KEY = 'game-role-ability-uses'
 
-export const GAME_ROLES = [
+export const ROLE_ABILITY_IDS = {
+  ANALYZE_PLAYER: 'analyze-player',
+} as const
+
+export interface GameRoleAbility {
+  id: string
+  label: string
+  target: 'player'
+  usesPerRound: number
+}
+
+export interface GameRole {
+  abilities: GameRoleAbility[]
+  description: string
+  icon: string
+  locked: boolean
+  name: string
+}
+
+export const GAME_ROLES: GameRole[] = [
   {
+    abilities: [],
     description: 'Trouve les Saboteurs et accomplis les actions avec ton équipe.',
+    icon: innocentIcon,
+    locked: true,
     name: 'Innocent',
   },
   {
-    description: 'Reste discret et empêche les Innocents de gagner.',
+    abilities: [],
+    description: 'Corromps tous les Innocents avant qu’ils n’éliminent les Saboteurs.',
+    icon: saboteurIcon,
+    locked: true,
     name: 'Saboteur',
   },
-] as const
+  {
+    abilities: [{
+      id: ROLE_ABILITY_IDS.ANALYZE_PLAYER,
+      label: 'Analyser un joueur',
+      target: 'player',
+      usesPerRound: 1,
+    }],
+    description: 'À ton tour et un fois par manche, découvre si un joueur est corrompu.',
+    icon: analystIcon,
+    locked: false,
+    name: 'L’Analyste',
+  },
+]
 
-export type GameRole = (typeof GAME_ROLES)[number]
+export function getGameRole(name: string): GameRole | undefined {
+  return GAME_ROLES.find((role) => role.name === name)
+}
 
 export interface GamePlayerAction {
   actionId: string
@@ -129,4 +172,12 @@ export async function getGameRoundLossPenalty(): Promise<number> {
 
 export function setGameRoundLossPenalty(penalty: number): Promise<void> {
   return idbSet(GAME_ROUND_LOSS_PENALTY_KEY, penalty)
+}
+
+export async function getGameRoleAbilityUses(): Promise<Record<string, number>> {
+  return (await idbGet<Record<string, number>>(GAME_ROLE_ABILITY_USES_KEY)) ?? {}
+}
+
+export function setGameRoleAbilityUses(uses: Record<string, number>): Promise<void> {
+  return idbSet(GAME_ROLE_ABILITY_USES_KEY, uses)
 }

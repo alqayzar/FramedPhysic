@@ -20,14 +20,18 @@ interface PlayerDraft {
 }
 
 interface GamePageProps {
+  onOpenSettings: () => void
   onQuit: () => void
 }
 
-function shuffleRoles(innocents: number, saboteurs: number): GameRole[] {
+function shuffleRoles(innocents: number, saboteurs: number, enabledRoleNames: string[]): GameRole[] {
+  const analystRole = GAME_ROLES[2]
   const roles: GameRole[] = [
     ...Array<GameRole>(innocents).fill(GAME_ROLES[0]),
     ...Array<GameRole>(saboteurs).fill(GAME_ROLES[1]),
   ]
+
+  if (enabledRoleNames.includes(analystRole.name)) roles[0] = analystRole
 
   for (let index = roles.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1))
@@ -48,13 +52,13 @@ function GamePage(props: GamePageProps) {
 
   useEffect(() => {
     if (!isGameSettingsLoaded) return
-    setRoles(shuffleRoles(gameSettings.teamCounts.innocents, gameSettings.teamCounts.saboteurs))
-  }, [gameSettings.teamCounts, isGameSettingsLoaded])
+    setRoles(shuffleRoles(gameSettings.teamCounts.innocents, gameSettings.teamCounts.saboteurs, gameSettings.enabledRoleNames))
+  }, [gameSettings.enabledRoleNames, gameSettings.teamCounts, isGameSettingsLoaded])
 
   useEffect(() => {
-    if (!isGamePlayersLoaded || gamePlayers.length < roles.length) return
+    if (!isGamePlayersLoaded || showRole || gamePlayers.length < roles.length) return
     setRegistrationIndex(roles.length)
-  }, [gamePlayers.length, isGamePlayersLoaded, roles.length])
+  }, [gamePlayers.length, isGamePlayersLoaded, roles.length, showRole])
 
   function handleNameChange(event: ChangeEvent<HTMLInputElement>) {
     setDraft((currentDraft) => ({ ...currentDraft, name: event.target.value }))
@@ -120,9 +124,9 @@ function GamePage(props: GamePageProps) {
   return (
     <main className="game-background fixed inset-0 overflow-y-auto px-5 py-6 text-game-ink sm:px-8 sm:py-8">
       {isRegistrationComplete ? (
-        <GameBoard onQuit={props.onQuit} />
+        <GameBoard onOpenSettings={props.onOpenSettings} onQuit={props.onQuit} />
       ) : (
-        <Dialog open>
+        <Dialog modal={false} open>
           <DialogContent className="w-[calc(100svw-2rem)] max-w-[calc(100svw-2rem)] rounded-2xl border-4 border-game-ink bg-white p-6 text-game-ink shadow-[0_8px_0_0_#16171d] sm:max-w-md" showCloseButton={false}>
             <DialogHeader>
               <DialogTitle className="text-2xl text-center font-black tracking-[-0.04em]">Nouveau joueur</DialogTitle>
