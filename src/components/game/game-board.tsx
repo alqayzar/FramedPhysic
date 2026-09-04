@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { GeneratedActionViewer } from '@/components/actions/generated-action-viewer'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -11,8 +11,9 @@ import { GameRoleDialog } from '@/components/game/game-role-dialog'
 import { GamePlayerActionsDialog } from '@/components/game/game-player-actions-dialog'
 import { GameTimer } from '@/components/game/game-timer'
 import { GameRoleIcon } from '@/components/game/game-role-icon'
+import { GameAtoutIcon } from '@/components/game/game-atout-icon'
 import { useGame } from '@/contexts/game-context'
-import { GAME_ROLES, getGameRole, ROLE_ABILITY_IDS } from '@/lib/game-session'
+import { GAME_ROLES, getGameAtout, type GameAtout, type GameAtoutContext } from '@/lib/game-session'
 import { RefreshCw, Settings, UsersRound } from 'lucide-react'
 
 interface GameBoardProps {
@@ -20,8 +21,20 @@ interface GameBoardProps {
   onQuit: () => void
 }
 
+interface AtoutControlButton {
+  backgroundColor?: string
+  id: string
+  label: string
+  onClick: () => void
+}
+
+interface AtoutDialogContent {
+  content?: ReactNode
+  title?: ReactNode
+}
+
 function GameBoard(props: GameBoardProps) {
-  const { activePlayerId, canCorruptGameAction, canUseActiveRoleAbility, corruptedActionId, corruptGameAction, eliminateGamePlayer, endGameRound, finishGameRound, gamePlayers, gameSettings, isVoting, reassignGameRoles, roundEndsAt, selectActivePlayer, selectedVotingActionIds, setVotingActionSelected, startGameRound, turnEndsAt, useActiveRoleAbility, winnerIds, winningMessage } = useGame()
+  const { activePlayerId, canCorruptGameAction, corruptedActionId, corruptGameAction, eliminateGamePlayer, endGameRound, finishGameRound, gamePlayers, gameSettings, getValue, isVoting, reassignGameRoles, roundEndsAt, roundNumber, selectActivePlayer, selectedVotingActionIds, setValue, setVotingActionSelected, startGameRound, turnEndsAt, winnerIds, winningMessage } = useGame()
   const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false)
   const [isRoleSelectionEnabled, setIsRoleSelectionEnabled] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>()
@@ -31,8 +44,14 @@ function GameBoard(props: GameBoardProps) {
   const [isVotingActionsOpen, setIsVotingActionsOpen] = useState(false)
   const [isCorruptionInfoOpen, setIsCorruptionInfoOpen] = useState(false)
   const [isActionsInfoOpen, setIsActionsInfoOpen] = useState(false)
-  const [isAnalyzingPlayer, setIsAnalyzingPlayer] = useState(false)
-  const [analyzedPlayerId, setAnalyzedPlayerId] = useState<string>()
+  const playerPressHandler = useRef<{ callback: (playerId: string) => void, id: string } | undefined>(undefined)
+  const lastStartedRoundNumber = useRef<number | undefined>(undefined)
+  const assignedItemsRef = useRef<HTMLDivElement>(null)
+  const [isAtoutPlayerSelectionEnabled, setIsAtoutPlayerSelectionEnabled] = useState(false)
+  const [atoutControlButtons, setAtoutControlButtons] = useState<AtoutControlButton[]>([])
+  const [enabledAbilities, setEnabledAbilities] = useState<Record<string, boolean>>({})
+  const [selectedStackItemId, setSelectedStackItemId] = useState<string>()
+  const [atoutDialog, setAtoutDialog] = useState<AtoutDialogContent>()
   const [pendingEliminationPlayerId, setPendingEliminationPlayerId] = useState<string>()
 
   useEffect(() => {
@@ -43,6 +62,30 @@ function GameBoard(props: GameBoardProps) {
     })
     return () => window.cancelAnimationFrame(frameId)
   }, [activePlayerId])
+
+  useEffect(() => {
+    function closeStackItemOnOutsidePress(event: PointerEvent) {
+      if (!assignedItemsRef.current?.contains(event.target as Node)) setSelectedStackItemId(undefined);
+    }
+
+    document.addEventListener('pointerdown', closeStackItemOnOutsidePress);
+    return () => document.removeEventListener('pointerdown', closeStackItemOnOutsidePress);
+  }, [])
+
+  useEffect(() => {
+    if (!roundEndsAt) {
+      lastStartedRoundNumber.current = undefined;
+      return;
+    }
+    if (roundNumber === 0 || lastStartedRoundNumber.current === roundNumber) return;
+
+    lastStartedRoundNumber.current = roundNumber;
+    gamePlayers.forEach((player) => {
+      player.atouts?.forEach((assignedAtout) => {
+        getGameAtout(assignedAtout.id)?.onRoundStart?.(createAtoutContext(player.id, assignedAtout.id));
+      });
+    });
+  }, [gamePlayers, roundEndsAt, roundNumber]);
 
   function openQuitDialog() {
     setIsQuitDialogOpen(true)
@@ -74,12 +117,17 @@ function GameBoard(props: GameBoardProps) {
     setIsRoleSelectionEnabled((enabled) => !enabled)
   }
 
+  function toggleStackItem(id: string) {
+    setSelectedStackItemId((selectedId) => selectedId === id ? undefined : id);
+  }
+
   function startGame() {
     const roundTimeout = gameSettings.roundTimeout
     const roundLossTimeout = gameSettings.roundLossTimeout
     const turnTimeout = gameSettings.turnTimeout
     const roundDuration = (roundTimeout.minutes * 60) + roundTimeout.seconds
     const roundLossDuration = (roundLossTimeout.minutes * 60) + roundLossTimeout.seconds
+    clearAtoutControls()
     setIsRoleSelectionEnabled(false)
     startGameRound(roundDuration, (turnTimeout.minutes * 60) + turnTimeout.seconds, roundLossDuration)
   }
@@ -88,11 +136,8 @@ function GameBoard(props: GameBoardProps) {
     const player = gamePlayers.find((currentPlayer) => currentPlayer.id === playerId)
     if (!player || player.eliminated) return
 
-    if (isAnalyzingPlayer && roundEndsAt) {
-      if (useActiveRoleAbility(ROLE_ABILITY_IDS.ANALYZE_PLAYER)) {
-        setAnalyzedPlayerId(playerId)
-        setIsAnalyzingPlayer(false)
-      }
+    if (playerPressHandler.current && roundEndsAt) {
+      playerPressHandler.current.callback(playerId)
       return
     }
 
@@ -124,17 +169,70 @@ function GameBoard(props: GameBoardProps) {
     setSelectedActionPlayerId(undefined)
   }
 
-  function startPlayerAnalysis() {
-    setIsAnalyzingPlayer(true)
-    closeActionsDialog()
+  function clearAtoutControls() {
+    playerPressHandler.current = undefined
+    setIsAtoutPlayerSelectionEnabled(false)
+    setAtoutControlButtons([])
   }
 
-  function stopPlayerAnalysis() {
-    setIsAnalyzingPlayer(false)
+  function addAtoutControlButton(label: string, backgroundColor: string | undefined, onClick: () => void): () => void {
+    const id = crypto.randomUUID()
+    setAtoutControlButtons((currentButtons) => [...currentButtons, { backgroundColor, id, label, onClick }])
+
+    return () => setAtoutControlButtons((currentButtons) => currentButtons.filter((button) => button.id !== id))
   }
 
-  function handleAnalysisDialogOpenChange(open: boolean) {
-    if (!open) setAnalyzedPlayerId(undefined)
+  function getAtoutAbilityKey(playerId: string, atoutId: string, label: string): string {
+    return `${playerId}:${atoutId}:${label}`;
+  }
+
+  function enableAtoutAbility(playerId: string, atoutId: string, label: string, enabled: boolean) {
+    const key = getAtoutAbilityKey(playerId, atoutId, label);
+    setEnabledAbilities((currentAbilities) => ({ ...currentAbilities, [key]: enabled }));
+  }
+
+  function onAtoutPlayerPressed(callback: (playerId: string) => void): () => void {
+    const id = crypto.randomUUID()
+    playerPressHandler.current = { callback, id }
+    setIsAtoutPlayerSelectionEnabled(true)
+
+    return () => {
+      if (playerPressHandler.current?.id !== id) return
+      playerPressHandler.current = undefined
+      setIsAtoutPlayerSelectionEnabled(false)
+    }
+  }
+
+  function openAtoutDialog(title?: ReactNode, content?: ReactNode) {
+    setAtoutDialog({ content, title })
+  }
+
+  function handleAtoutDialogOpenChange(open: boolean) {
+    if (!open) setAtoutDialog(undefined)
+  }
+
+  function useAtoutAbility(atoutId: string, abilityIndex: number) {
+    const playerHasAtout = selectedActionPlayer?.atouts?.some((atout) => atout.id === atoutId)
+    const atout = playerHasAtout ? getGameAtout(atoutId) : undefined
+    const ability = atout?.abilities[abilityIndex]
+    if (!atout || !ability || !selectedActionPlayer) return;
+
+    closeActionsDialog();
+    ability.onClick(createAtoutContext(selectedActionPlayer.id, atout.id));
+  }
+
+  function createAtoutContext(playerId: string, atoutId: string): GameAtoutContext {
+    return {
+      addControlButton: addAtoutControlButton,
+      enableAbility: (label, enabled) => enableAtoutAbility(playerId, atoutId, label, enabled),
+      gameState: { roundEndsAt, roundNumber, turnEndsAt },
+      getValue,
+      onPlayerPressed: onAtoutPlayerPressed,
+      openDialog: openAtoutDialog,
+      playerId,
+      players: gamePlayers,
+      setValue,
+    }
   }
 
   function handlePlayerSelectionDialogOpenChange(open: boolean) {
@@ -156,7 +254,7 @@ function GameBoard(props: GameBoardProps) {
 
     const timeout = gameSettings.turnTimeout
     setSelectedActionPlayerId(undefined)
-    setIsAnalyzingPlayer(false)
+    clearAtoutControls()
     selectActivePlayer(nextPlayer.id, (timeout.minutes * 60) + timeout.seconds)
   }
 
@@ -170,14 +268,14 @@ function GameBoard(props: GameBoardProps) {
 
   async function confirmRoundEnd() {
     await finishGameRound()
-    setIsAnalyzingPlayer(false)
+    clearAtoutControls()
     setIsRoundEndDialogOpen(false)
   }
 
   async function handleRoundTimerExpiry() {
     await finishGameRound()
     setSelectedActionPlayerId(undefined)
-    setIsAnalyzingPlayer(false)
+    clearAtoutControls()
     setIsRoundEndDialogOpen(false)
   }
 
@@ -201,7 +299,6 @@ function GameBoard(props: GameBoardProps) {
 
   const selectedPlayer = gamePlayers.find((player) => player.id === selectedPlayerId)
   const selectedActionPlayer = gamePlayers.find((player) => player.id === selectedActionPlayerId)
-  const analyzedPlayer = gamePlayers.find((player) => player.id === analyzedPlayerId)
   const totalActions = gamePlayers.reduce((total, player) => total + (player.actions?.length ?? 0), 0)
   const pendingPlayer = gamePlayers.find((player) => player.id === pendingPlayerId)
   const pendingEliminationPlayer = gamePlayers.find((player) => player.id === pendingEliminationPlayerId)
@@ -209,13 +306,22 @@ function GameBoard(props: GameBoardProps) {
   const innocentPlayers = gamePlayers.filter((player) => player.role.name !== GAME_ROLES[1].name && !player.eliminated)
   const corruptedPlayerCount = innocentPlayers.filter((player) => player.corrupted).length
   const isVictory = winnerIds.length > 0
-  const selectedActionPlayerRole = selectedActionPlayer ? getGameRole(selectedActionPlayer.role.name) : undefined
-  const selectedPlayerCanAnalyze = Boolean(selectedActionPlayer?.id === activePlayerId && selectedActionPlayerRole?.abilities.some((ability) => ability.id === ROLE_ABILITY_IDS.ANALYZE_PLAYER))
-  const analystRoleAction = selectedPlayerCanAnalyze ? {
-    disabled: isAnalyzingPlayer || !canUseActiveRoleAbility(ROLE_ABILITY_IDS.ANALYZE_PLAYER),
-    label: 'Analyser un joueur',
-    onClick: startPlayerAnalysis,
-  } : undefined
+  const assignedRoleSummaries = GAME_ROLES
+    .map((role) => ({ count: gamePlayers.filter((player) => player.role.name === role.name).length, role }))
+    .filter(({ count }) => count > 0);
+  const assignedAtouts = gamePlayers.flatMap((player) => player.atouts ?? []);
+  const selectedActionPlayerAtouts = (selectedActionPlayer?.atouts ?? [])
+    .map((atout) => getGameAtout(atout.id))
+    .filter((atout): atout is GameAtout => Boolean(atout))
+  const atoutActions = selectedActionPlayer && selectedActionPlayer.id === activePlayerId
+    ? selectedActionPlayerAtouts.flatMap((atout) => atout.abilities.map((ability, abilityIndex) => ({
+        backgroundColor: ability.backgroundColor,
+        disabled: enabledAbilities[getAtoutAbilityKey(selectedActionPlayer.id, atout.id, ability.label)] === false,
+        id: `${atout.id}:${abilityIndex}`,
+        label: ability.label,
+        onClick: () => useAtoutAbility(atout.id, abilityIndex),
+      })))
+    : []
 
   return (
     <section className="mx-auto flex h-full max-w-4xl flex-col">
@@ -228,16 +334,31 @@ function GameBoard(props: GameBoardProps) {
           </Button>
         )}
       </div>
-      <div className="mt-8 flex items-center gap-3">
+      <div className="mt-8 flex items-center gap-3" ref={assignedItemsRef}>
         <UsersRound aria-hidden="true" className="size-7" />
         {!roundEndsAt && !isVoting && (
           <>
             <h1 className="text-3xl font-black tracking-[-0.06em]">{gamePlayers.length}</h1>
             <span aria-label="Rôles assignés" className="flex -space-x-2">
-              {gamePlayers
-                .filter((player, index, players) => player.role.name !== GAME_ROLES[0].name || players.findIndex((currentPlayer) => currentPlayer.role.name === GAME_ROLES[0].name) === index)
-                .sort((firstPlayer, secondPlayer) => GAME_ROLES.findIndex((role) => role.name === firstPlayer.role.name) - GAME_ROLES.findIndex((role) => role.name === secondPlayer.role.name))
-                .map((player) => <GameRoleIcon className="size-8" key={player.id} role={player.role} />)}
+              {assignedRoleSummaries.map(({ count, role }) => (
+                <button aria-label={role.name} aria-pressed={selectedStackItemId === role.name} className="relative flex items-center" key={role.name} onClick={() => toggleStackItem(role.name)} type="button">
+                  <GameRoleIcon className="size-8" role={role} />
+                  {role.name === GAME_ROLES[1].name && count > 1 && <span className="-ml-1 text-lg leading-none font-black">X{count}</span>}
+                  {selectedStackItemId === role.name && <span className="absolute -top-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-game-ink bg-white px-2 py-1 text-xs font-black shadow-[0_2px_0_0_#16171d]">{role.name}</span>}
+                </button>
+              ))}
+            </span>
+            <span aria-label="Atouts assignés" className="flex -space-x-2">
+              {assignedAtouts.map((atout, index) => {
+                const itemId = `${atout.id}-${index}`;
+
+                return (
+                  <button aria-label={atout.name} aria-pressed={selectedStackItemId === itemId} className="relative" key={itemId} onClick={() => toggleStackItem(itemId)} type="button">
+                    <GameAtoutIcon atout={atout} className="size-8" />
+                    {selectedStackItemId === itemId && <span className="absolute -top-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-game-ink bg-white px-2 py-1 text-xs font-black shadow-[0_2px_0_0_#16171d]">{atout.name}</span>}
+                  </button>
+                )
+              })}
             </span>
           </>
         )}
@@ -259,7 +380,7 @@ function GameBoard(props: GameBoardProps) {
             isActive={!isVictory && player.id === activePlayerId}
             isEliminated={Boolean(player.eliminated)}
             isRoundRunning={!isVictory && Boolean(roundEndsAt)}
-            isTargetSelectionEnabled={!isVictory && isAnalyzingPlayer}
+            isTargetSelectionEnabled={!isVictory && isAtoutPlayerSelectionEnabled}
             isVoting={!isVictory && isVoting}
             isRoleSelectionEnabled={!isVictory && isRoleSelectionEnabled}
             isWinner={winnerIds.includes(player.id)}
@@ -279,7 +400,11 @@ function GameBoard(props: GameBoardProps) {
       )}
       {!isVictory && (roundEndsAt ? (
         <div className="fixed inset-x-5 bottom-6 z-20 mx-auto grid max-w-sm gap-3 sm:inset-x-8">
-          {isAnalyzingPlayer && <Button className="cartoon-press h-auto rounded-xl border-4 border-game-ink bg-game-red px-5 py-3 font-black text-white hover:bg-game-red" onClick={stopPlayerAnalysis} type="button">Arrêter l’analyse</Button>}
+          {atoutControlButtons.map((button) => (
+            <Button className="cartoon-press h-auto rounded-xl border-4 border-game-ink px-5 py-3 font-black text-white" key={button.id} onClick={button.onClick} style={{ backgroundColor: button.backgroundColor ?? 'var(--color-game-blue)' }} type="button">
+              {button.label}
+            </Button>
+          ))}
           {turnEndsAt && <GameTimer endsAt={turnEndsAt} label="Temps par tour" onExpire={selectNextPlayer} />}
           <GameTimer endsAt={roundEndsAt} label="Temps de manche" onClick={openRoundEndDialog} onExpire={handleRoundTimerExpiry} />
         </div>
@@ -307,23 +432,21 @@ function GameBoard(props: GameBoardProps) {
       ))}
       <GameQuitDialog isRoundRunning={Boolean(roundEndsAt) || isVoting} onConfirm={confirmQuit} onOpenChange={handleQuitDialogOpenChange} open={isQuitDialogOpen} />
       {selectedPlayer && (
-        <GameRoleDialog onConfirm={closeRoleDialog} onOpenChange={handleRoleDialogOpenChange} open playerName={selectedPlayer.name} role={selectedPlayer.role} />
+        <GameRoleDialog atouts={selectedPlayer.atouts} onConfirm={closeRoleDialog} onOpenChange={handleRoleDialogOpenChange} open playerName={selectedPlayer.name} role={selectedPlayer.role} />
       )}
       {selectedActionPlayer && (
-        <GamePlayerActionsDialog canCorruptAction={canCorruptGameAction} corruptedActionId={corruptedActionId} onCorruptAction={corruptGameAction} onOpenChange={closeActionsDialog} open player={selectedActionPlayer} players={gamePlayers} roleAction={analystRoleAction} />
+        <GamePlayerActionsDialog atoutActions={atoutActions} canCorruptAction={canCorruptGameAction} corruptedActionId={corruptedActionId} onCorruptAction={corruptGameAction} onOpenChange={closeActionsDialog} open player={selectedActionPlayer} players={gamePlayers} />
       )}
       <GamePlayerSelectionDialog onConfirm={confirmPlayerSelection} onOpenChange={handlePlayerSelectionDialogOpenChange} open={Boolean(pendingPlayer)} player={pendingPlayer} />
       <GameRoundEndDialog onConfirm={confirmRoundEnd} onOpenChange={handleRoundEndDialogOpenChange} open={isRoundEndDialogOpen} />
       <GamePlayerEliminationDialog onConfirm={confirmElimination} onOpenChange={handleEliminationDialogOpenChange} open={Boolean(pendingEliminationPlayer)} player={pendingEliminationPlayer} />
-      <Dialog onOpenChange={handleAnalysisDialogOpenChange} open={Boolean(analyzedPlayer)}>
+      <Dialog onOpenChange={handleAtoutDialogOpenChange} open={Boolean(atoutDialog)}>
         <DialogContent className="w-[calc(100svw-2rem)] max-w-[calc(100svw-2rem)] rounded-2xl border-4 border-game-ink bg-white p-6 text-game-ink shadow-[0_8px_0_0_#16171d] sm:max-w-md">
           <DialogHeader className="pr-10">
-            <DialogTitle className="text-2xl font-black tracking-[-0.04em]">Analyse</DialogTitle>
-            <DialogDescription className="mt-3 font-bold leading-6 text-game-ink/65">
-              {analyzedPlayer?.corrupted ? `${analyzedPlayer.name} est corrompu.` : `${analyzedPlayer?.name} n’est pas corrompu.`}
-            </DialogDescription>
+            {atoutDialog?.title && <DialogTitle className="text-2xl font-black tracking-[-0.04em]">{atoutDialog.title}</DialogTitle>}
+            {atoutDialog?.content && <DialogDescription className="mt-3 font-bold leading-6 text-game-ink/65">{atoutDialog.content}</DialogDescription>}
           </DialogHeader>
-          <Button className="cartoon-press h-auto w-full rounded-xl border-4 border-game-ink bg-game-yellow px-5 py-3 text-lg font-black text-game-ink hover:bg-game-yellow" onClick={() => setAnalyzedPlayerId(undefined)} type="button">Ok</Button>
+          <Button className="cartoon-press h-auto w-full rounded-xl border-4 border-game-ink bg-game-yellow px-5 py-3 text-lg font-black text-game-ink hover:bg-game-yellow" onClick={() => setAtoutDialog(undefined)} type="button">Ok</Button>
         </DialogContent>
       </Dialog>
       <Dialog onOpenChange={setIsCorruptionInfoOpen} open={isCorruptionInfoOpen}>

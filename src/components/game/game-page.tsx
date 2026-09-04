@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { EmojiPickerDialog } from '@/components/settings/emoji-picker-dialog'
 import { useGame } from '@/contexts/game-context'
 import { createEmojiImage } from '@/lib/emoji-image'
-import { GAME_ROLES, type GameRole } from '@/lib/game-session'
+import { GAME_ATOUTS, GAME_ROLES, type GameAtout, type GameRole } from '@/lib/game-session'
 import { createSquareImage } from '@/lib/square-image'
 import { cn } from '@/lib/utils'
 import { Camera, Smile, Trash2 } from 'lucide-react'
@@ -24,21 +24,29 @@ interface GamePageProps {
   onQuit: () => void
 }
 
-function shuffleRoles(innocents: number, saboteurs: number, enabledRoleNames: string[]): GameRole[] {
-  const analystRole = GAME_ROLES[2]
-  const roles: GameRole[] = [
-    ...Array<GameRole>(innocents).fill(GAME_ROLES[0]),
-    ...Array<GameRole>(saboteurs).fill(GAME_ROLES[1]),
+interface PlayerAssignment {
+  atouts: GameAtout[]
+  role: GameRole
+}
+
+function shuffleAssignments(innocents: number, saboteurs: number, enabledAtoutIds: string[]): PlayerAssignment[] {
+  const assignments: PlayerAssignment[] = [
+    ...Array.from({ length: innocents }, () => ({ atouts: [], role: GAME_ROLES[0] })),
+    ...Array.from({ length: saboteurs }, () => ({ atouts: [], role: GAME_ROLES[1] })),
   ]
 
-  if (enabledRoleNames.includes(analystRole.name)) roles[0] = analystRole
+  GAME_ATOUTS.filter((atout) => enabledAtoutIds.includes(atout.id)).forEach((atout) => {
+    const innocentAssignments = assignments.filter((assignment) => assignment.role.name === GAME_ROLES[0].name)
+    const recipient = innocentAssignments[Math.floor(Math.random() * innocentAssignments.length)]
+    if (recipient) recipient.atouts.push(atout)
+  })
 
-  for (let index = roles.length - 1; index > 0; index -= 1) {
+  for (let index = assignments.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1))
-    ;[roles[index], roles[swapIndex]] = [roles[swapIndex], roles[index]]
+    ;[assignments[index], assignments[swapIndex]] = [assignments[swapIndex], assignments[index]]
   }
 
-  return roles
+  return assignments
 }
 
 function GamePage(props: GamePageProps) {
@@ -47,18 +55,18 @@ function GamePage(props: GamePageProps) {
   const [draft, setDraft] = useState<PlayerDraft>({ name: '' })
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
   const [registrationIndex, setRegistrationIndex] = useState(0)
-  const [roles, setRoles] = useState<GameRole[]>([])
+  const [assignments, setAssignments] = useState<PlayerAssignment[]>([])
   const [showRole, setShowRole] = useState(false)
 
   useEffect(() => {
     if (!isGameSettingsLoaded) return
-    setRoles(shuffleRoles(gameSettings.teamCounts.innocents, gameSettings.teamCounts.saboteurs, gameSettings.enabledRoleNames))
-  }, [gameSettings.enabledRoleNames, gameSettings.teamCounts, isGameSettingsLoaded])
+    setAssignments(shuffleAssignments(gameSettings.teamCounts.innocents, gameSettings.teamCounts.saboteurs, gameSettings.enabledAtoutIds))
+  }, [gameSettings.enabledAtoutIds, gameSettings.teamCounts, isGameSettingsLoaded])
 
   useEffect(() => {
-    if (!isGamePlayersLoaded || showRole || gamePlayers.length < roles.length) return
-    setRegistrationIndex(roles.length)
-  }, [gamePlayers.length, isGamePlayersLoaded, roles.length, showRole])
+    if (!isGamePlayersLoaded || showRole || gamePlayers.length < assignments.length) return
+    setRegistrationIndex(assignments.length)
+  }, [assignments.length, gamePlayers.length, isGamePlayersLoaded, showRole])
 
   function handleNameChange(event: ChangeEvent<HTMLInputElement>) {
     setDraft((currentDraft) => ({ ...currentDraft, name: event.target.value }))
@@ -101,9 +109,10 @@ function GamePage(props: GamePageProps) {
 
   function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!draft.name.trim() || !roles[registrationIndex]) return
+    const assignment = assignments[registrationIndex]
+    if (!draft.name.trim() || !assignment) return
 
-    const player = { ...draft, id: crypto.randomUUID(), name: draft.name.trim(), role: roles[registrationIndex] }
+    const player = { ...draft, ...assignment, id: crypto.randomUUID(), name: draft.name.trim() }
     addGamePlayer(player)
     setShowRole(true)
   }
@@ -114,12 +123,12 @@ function GamePage(props: GamePageProps) {
     setRegistrationIndex((index) => index + 1)
   }
 
-  if (!isGameSettingsLoaded || !isGamePlayersLoaded || !isGameRoundLoaded || roles.length === 0) {
+  if (!isGameSettingsLoaded || !isGamePlayersLoaded || !isGameRoundLoaded || assignments.length === 0) {
     return <main className="game-background grid h-svh place-items-center text-xl font-black text-game-ink">Chargement...</main>
   }
 
-  const isRegistrationComplete = registrationIndex >= roles.length
-  const currentRole = roles[registrationIndex]
+  const isRegistrationComplete = registrationIndex >= assignments.length
+  const currentAssignment = assignments[registrationIndex]
 
   return (
     <main className="game-background fixed inset-0 overflow-y-auto px-5 py-6 text-game-ink sm:px-8 sm:py-8">
@@ -160,8 +169,8 @@ function GamePage(props: GamePageProps) {
 
       <EmojiPickerDialog onOpenChange={handleEmojiPickerOpenChange} onSelect={selectEmoji} open={isEmojiPickerOpen} />
 
-      {showRole && currentRole && (
-        <GameRoleDialog onConfirm={handleRoleConfirmed} open role={currentRole} />
+      {showRole && currentAssignment && (
+        <GameRoleDialog atouts={currentAssignment.atouts} onConfirm={handleRoleConfirmed} open role={currentAssignment.role} />
       )}
     </main>
   )

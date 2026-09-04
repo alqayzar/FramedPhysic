@@ -1,15 +1,16 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { GameRoleIcon } from '@/components/game/game-role-icon'
-import { RolesDialog } from '@/components/menu/roles-dialog'
+import { GameAtoutIcon } from '@/components/game/game-atout-icon'
+import { AtoutsDialog } from '@/components/menu/atouts-dialog'
 import { useGame } from '@/contexts/game-context'
-import { GAME_ROLES } from '@/lib/game-session'
+import { GAME_ATOUTS, GAME_ROLES } from '@/lib/game-session'
 import { Minus, Plus, Users } from 'lucide-react'
 
 function TeamSetup() {
   const [innocents, setInnocents] = useState(2)
   const [saboteurs, setSaboteurs] = useState(1)
-  const [isRolesDialogOpen, setIsRolesDialogOpen] = useState(false)
+  const [isAtoutsDialogOpen, setIsAtoutsDialogOpen] = useState(false)
   const { gameSettings, saveGameSettings, saveTeamCounts } = useGame()
 
   useEffect(() => {
@@ -67,27 +68,29 @@ function TeamSetup() {
     persistTeamCounts(innocents, count)
   }
 
-  function handleRolesDialogOpenChange(open: boolean) {
-    setIsRolesDialogOpen(open)
+  function handleAtoutsDialogOpenChange(open: boolean) {
+    setIsAtoutsDialogOpen(open)
   }
 
-  function handleSelectedRoleNamesChange(enabledRoleNames: string[]) {
-    void saveGameSettings({ ...gameSettings, enabledRoleNames })
+  function handleSelectedAtoutIdsChange(enabledAtoutIds: string[]) {
+    void saveGameSettings({ ...gameSettings, enabledAtoutIds })
   }
 
   return (
     <section className="relative w-full max-w-sm" aria-label="Composition des équipes">
-      <button aria-label="Afficher les rôles" className="cartoon-press absolute -top-5 left-4 z-10 inline-flex items-center gap-1.5 rounded-full border-3 border-game-ink bg-white px-2.5 py-1 text-md font-black shadow-[0_3px_0_0_#16171d]" onClick={() => setIsRolesDialogOpen(true)} type="button">
+      <div aria-label="Nombre de joueurs" className="absolute -top-5 left-4 z-10 inline-flex items-center gap-1.5 rounded-full border-3 border-game-ink bg-white px-2.5 py-1 text-md font-black shadow-[0_3px_0_0_#16171d]">
         <Users aria-hidden="true" className="size-6" />
         {innocents + saboteurs}
-      </button>
-      <Button className="cartoon-press absolute -top-5 right-4 z-10 h-auto rounded-full border-3 border-game-ink bg-game-purple px-3 py-1 text-md font-black text-white hover:bg-game-purple" onClick={() => setIsRolesDialogOpen(true)} type="button">
-        <span>Rôles</span>
-        <span className="flex -space-x-1" aria-hidden="true">
-          {GAME_ROLES.filter((role) => gameSettings.enabledRoleNames.includes(role.name)).map((role) => (
-            <GameRoleIcon className="size-5 border-2 border-black bg-white rounded-full" key={role.name} role={role} />
-          ))}
-        </span>
+      </div>
+      <Button className="cartoon-press absolute -top-5 right-4 z-10 h-auto rounded-full border-3 border-game-ink bg-game-purple px-3 py-1 text-md font-black text-white hover:bg-game-purple" onClick={() => setIsAtoutsDialogOpen(true)} type="button">
+        <span>Atouts</span>
+        {GAME_ATOUTS.some((atout) => gameSettings.enabledAtoutIds.includes(atout.id)) && (
+          <span aria-hidden="true" className="flex -space-x-1">
+            {GAME_ATOUTS.filter((atout) => gameSettings.enabledAtoutIds.includes(atout.id)).map((atout) => (
+              <GameAtoutIcon atout={atout} className="size-5 rounded-full border-2 border-black bg-white" key={atout.id} />
+            ))}
+          </span>
+        )}
       </Button>
       <div className="rounded-2xl border-4 border-game-ink bg-game-yellow p-4 text-center shadow-[0_5px_0_0_#16171d]">
         <div className="grid gap-3">
@@ -117,7 +120,7 @@ function TeamSetup() {
           </div>
         </div>
       </div>
-      <RolesDialog onOpenChange={handleRolesDialogOpenChange} onSelectedRoleNamesChange={handleSelectedRoleNamesChange} open={isRolesDialogOpen} selectedRoleNames={gameSettings.enabledRoleNames} />
+      <AtoutsDialog onOpenChange={handleAtoutsDialogOpenChange} onSelectedAtoutIdsChange={handleSelectedAtoutIdsChange} open={isAtoutsDialogOpen} selectedAtoutIds={gameSettings.enabledAtoutIds} />
     </section>
   )
 }

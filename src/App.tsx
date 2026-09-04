@@ -7,7 +7,7 @@ import { GamePage } from '@/components/game/game-page'
 import { SettingsDialog } from '@/components/settings/settings-dialog'
 import { GameProvider, useGame } from '@/contexts/game-context'
 import { createEmojiImage } from '@/lib/emoji-image'
-import { GAME_ROLES, type GamePlayer } from '@/lib/game-session'
+import { GAME_ATOUTS, GAME_ROLES, type GamePlayer } from '@/lib/game-session'
 
 interface GameRouteProps {
   onOpenSettings: () => void
@@ -51,11 +51,8 @@ function GameApp() {
 
   async function startDebugGame() {
     await clearGamePlayers()
-    const analystRole = GAME_ROLES[2]
-    const innocentRoles = Array(gameSettings.teamCounts.innocents).fill(GAME_ROLES[0])
-    if (gameSettings.enabledRoleNames.includes(analystRole.name)) innocentRoles[0] = analystRole
     const roles = [
-      ...innocentRoles,
+      ...Array(gameSettings.teamCounts.innocents).fill(GAME_ROLES[0]),
       ...Array(gameSettings.teamCounts.saboteurs).fill(GAME_ROLES[1]),
     ]
     const names = ['Alex', 'Camille', 'Charlie', 'Dorian', 'Élise', 'Franck', 'Gaël', 'Inès', 'Jules', 'Lina', 'Malo', 'Nora']
@@ -68,12 +65,19 @@ function GameApp() {
 
     const players: GamePlayer[] = await Promise.all(
       roles.map(async (role, index) => ({
+        atouts: [],
         id: crypto.randomUUID(),
         image: await createEmojiImage(emojis[Math.floor(Math.random() * emojis.length)]),
         name: `${names[Math.floor(Math.random() * names.length)]} ${index + 1}`,
         role,
       })),
     )
+
+    GAME_ATOUTS.filter((atout) => gameSettings.enabledAtoutIds.includes(atout.id)).forEach((atout) => {
+      const innocentPlayers = players.filter((player) => player.role.name === GAME_ROLES[0].name)
+      const recipient = innocentPlayers[Math.floor(Math.random() * innocentPlayers.length)]
+      if (recipient) recipient.atouts?.push(atout)
+    })
 
     replaceGamePlayers(players)
     navigate('/game', { state: { gameLaunch: true } })

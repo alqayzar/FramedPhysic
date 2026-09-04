@@ -23,7 +23,7 @@ function createSettings(
   turnSeconds: string,
   teamCounts: TeamCounts,
   actionsPerPlayer: ActionCountRange,
-  enabledRoleNames: string[],
+  enabledAtoutIds: string[],
   showRoleAfterElimination: boolean,
 ): GameSettings {
   return {
@@ -41,7 +41,7 @@ function createSettings(
     },
     teamCounts,
     actionsPerPlayer,
-    enabledRoleNames,
+    enabledAtoutIds,
     showRoleAfterElimination,
   }
 }
@@ -76,7 +76,7 @@ function TimerSettings(props: TimerSettingsProps) {
     setErrorMessage('')
 
     try {
-      await props.onSave(createSettings(roundLossMinutes, roundLossSeconds, roundMinutes, roundSeconds, turnMinutes, turnSeconds, props.settings.teamCounts, props.settings.actionsPerPlayer, props.settings.enabledRoleNames, props.settings.showRoleAfterElimination))
+      await props.onSave(createSettings(roundLossMinutes, roundLossSeconds, roundMinutes, roundSeconds, turnMinutes, turnSeconds, props.settings.teamCounts, props.settings.actionsPerPlayer, props.settings.enabledAtoutIds, props.settings.showRoleAfterElimination))
       if (changeVersion.current === version) setHasChanges(false)
     } catch {
       setErrorMessage('Impossible d’enregistrer les chronomètres.')

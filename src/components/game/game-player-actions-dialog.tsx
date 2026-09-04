@@ -7,6 +7,13 @@ import { cn } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 
 interface GamePlayerActionsDialogProps {
+  atoutActions: Array<{
+    backgroundColor?: string
+    disabled: boolean
+    id: string
+    label: string
+    onClick: () => void
+  }>
   canCorruptAction: boolean
   corruptedActionId?: string
   onCorruptAction: (actionId: string, isSelected: boolean) => void
@@ -14,11 +21,6 @@ interface GamePlayerActionsDialogProps {
   open: boolean
   player: GamePlayer
   players: GamePlayer[]
-  roleAction?: {
-    disabled: boolean
-    label: string
-    onClick: () => void
-  }
 }
 
 function GamePlayerActionsDialog(props: GamePlayerActionsDialogProps) {
@@ -40,15 +42,21 @@ function GamePlayerActionsDialog(props: GamePlayerActionsDialogProps) {
         <DialogHeader className="pr-10">
           <DialogTitle className="break-words text-2xl font-black tracking-[-0.06em]">{isSaboteur ? 'Actions' : 'Mes actions'}</DialogTitle>
         </DialogHeader>
-        {props.roleAction && (
-          <Button
-            className={cn('cartoon-press mt-4 h-auto w-full rounded-xl border-4 border-game-ink px-5 py-3 text-lg font-black text-white', props.roleAction.disabled ? 'bg-slate-400 hover:bg-slate-400' : 'bg-game-blue hover:bg-game-blue')}
-            disabled={props.roleAction.disabled}
-            onClick={props.roleAction.onClick}
-            type="button"
-          >
-            {props.roleAction.label}
-          </Button>
+        {props.atoutActions.length > 0 && (
+          <div className="mt-4 grid gap-3">
+            {props.atoutActions.map((action) => (
+              <Button
+                className={cn('cartoon-press h-auto w-full rounded-xl border-4 border-game-ink px-5 py-3 text-lg font-black text-white', action.disabled && 'bg-slate-400 hover:bg-slate-400')}
+                disabled={action.disabled}
+                key={action.id}
+                onClick={action.onClick}
+                style={action.disabled ? undefined : { backgroundColor: action.backgroundColor ?? 'var(--color-game-blue)' }}
+                type="button"
+              >
+                {action.label}
+              </Button>
+            ))}
+          </div>
         )}
         {isSaboteur ? (
           <div className="mt-5 max-h-[65svh] overflow-y-auto pr-1">
