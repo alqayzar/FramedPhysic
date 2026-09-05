@@ -25,7 +25,7 @@ function AtoutsDialog(props: AtoutsDialogProps) {
           <DialogTitle className="text-2xl font-black tracking-[-0.06em] sm:text-3xl">Atouts</DialogTitle>
         </DialogHeader>
         <div className="grid min-w-0 gap-4 pr-1 pb-1">
-          {GAME_ATOUTS.map((atout) => {
+          {GAME_ATOUTS.filter((atout) => atout.visible !== false).map((atout) => {
               const isSelected = props.selectedAtoutIds.includes(atout.id)
 
               return (

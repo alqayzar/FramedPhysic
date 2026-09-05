@@ -45,7 +45,7 @@ function GameTimer(props: GameTimerProps) {
     return <button aria-label={`Terminer ${props.label.toLowerCase()}`} className="cartoon-press w-full rounded-xl border-4 border-game-ink bg-game-yellow px-5 py-3 text-center font-black text-game-ink shadow-[0_5px_0_0_#16171d]" onClick={props.onClick} type="button">{content}</button>
   }
 
-  return <div aria-live="polite" className="rounded-xl border-4 border-game-ink bg-game-yellow px-5 py-3 text-center font-black text-game-ink shadow-[0_5px_0_0_#16171d]">{content}</div>
+  return <div aria-live="polite" className="w-full rounded-xl border-4 border-game-ink bg-game-yellow px-5 py-3 text-center font-black text-game-ink shadow-[0_5px_0_0_#16171d]">{content}</div>
 }
 
 export { GameTimer }

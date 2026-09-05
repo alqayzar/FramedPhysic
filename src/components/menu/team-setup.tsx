@@ -86,7 +86,7 @@ function TeamSetup() {
         <span>Atouts</span>
         {GAME_ATOUTS.some((atout) => gameSettings.enabledAtoutIds.includes(atout.id)) && (
           <span aria-hidden="true" className="flex -space-x-1">
-            {GAME_ATOUTS.filter((atout) => gameSettings.enabledAtoutIds.includes(atout.id)).map((atout) => (
+          {GAME_ATOUTS.filter((atout) => atout.visible !== false && gameSettings.enabledAtoutIds.includes(atout.id)).map((atout) => (
               <GameAtoutIcon atout={atout} className="size-5 rounded-full border-2 border-black bg-white" key={atout.id} />
             ))}
           </span>

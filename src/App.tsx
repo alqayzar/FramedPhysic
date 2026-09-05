@@ -7,7 +7,7 @@ import { GamePage } from '@/components/game/game-page'
 import { SettingsDialog } from '@/components/settings/settings-dialog'
 import { GameProvider, useGame } from '@/contexts/game-context'
 import { createEmojiImage } from '@/lib/emoji-image'
-import { GAME_ATOUTS, GAME_ROLES, type GamePlayer } from '@/lib/game-session'
+import { canAddAtout, GAME_ATOUTS, GAME_ROLES, type GameAtout, type GamePlayer } from '@/lib/game-session'
 
 interface GameRouteProps {
   onOpenSettings: () => void
@@ -73,10 +73,15 @@ function GameApp() {
       })),
     )
 
-    GAME_ATOUTS.filter((atout) => gameSettings.enabledAtoutIds.includes(atout.id)).forEach((atout) => {
-      const innocentPlayers = players.filter((player) => player.role.name === GAME_ROLES[0].name)
-      const recipient = innocentPlayers[Math.floor(Math.random() * innocentPlayers.length)]
-      if (recipient) recipient.atouts?.push(atout)
+    GAME_ATOUTS.filter((atout) => atout.autoDistribute || gameSettings.enabledAtoutIds.includes(atout.id)).forEach((atout) => {
+      const appliesToAllPlayers = (atout as GameAtout).appliesToAllPlayers === true
+      const eligiblePlayers = players.filter((player) => (atout.autoDistribute ? player.role.name === atout.autoDistribute : appliesToAllPlayers || player.role.name === GAME_ROLES[0].name) && canAddAtout(player.atouts ?? [], atout))
+
+      if (atout.autoDistribute || appliesToAllPlayers) eligiblePlayers.forEach((player) => player.atouts?.push(atout))
+      else {
+        const recipient = eligiblePlayers[Math.floor(Math.random() * eligiblePlayers.length)]
+        if (recipient) recipient.atouts?.push(atout)
+      }
     })
 
     replaceGamePlayers(players)

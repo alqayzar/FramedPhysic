@@ -140,4 +140,4 @@ function GeneratedActionViewer(props: GeneratedActionViewerProps) {
   )
 }
 
-export { GeneratedActionViewer, type GeneratedActionViewerAction }
+export { GeneratedActionElementButton, GeneratedActionViewer, type GeneratedActionViewerAction }

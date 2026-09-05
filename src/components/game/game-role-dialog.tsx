@@ -14,6 +14,8 @@ interface GameRoleDialogProps {
 }
 
 function GameRoleDialog(props: GameRoleDialogProps) {
+  const visibleAtouts = props.atouts?.filter((atout) => atout.visible !== false) ?? []
+
   return (
     <Dialog onOpenChange={props.onOpenChange} open={props.open}>
       <DialogContent className="w-[calc(100svw-2rem)] max-w-[calc(100svw-2rem)] overflow-x-hidden rounded-2xl border-4 border-game-ink bg-game-yellow p-6 text-center text-game-ink shadow-[0_8px_0_0_#16171d] sm:max-w-sm" showCloseButton={false}>
@@ -29,10 +31,10 @@ function GameRoleDialog(props: GameRoleDialogProps) {
             <GameRoleIcon className="size-8" role={props.role} />
           </h2>
           <p className="mt-4 break-words text-base font-bold leading-5 text-game-ink/65">{props.role.description}</p>
-          {props.atouts && props.atouts.length > 0 && (
+          {visibleAtouts.length > 0 && (
             <div className="mt-6">
               <div className="mt-3 grid gap-3">
-                {props.atouts.map((atout) => (
+                {visibleAtouts.map((atout) => (
                   <p className="min-w-0 break-words text-left text-sm font-bold leading-5" key={atout.id}>
                     <GameAtoutIcon atout={atout} className="mr-2 inline-block size-6 align-text-bottom" />
                     <span className="font-black text-game-ink">{atout.name}</span>

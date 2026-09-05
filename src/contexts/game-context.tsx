@@ -8,7 +8,7 @@ import {
   type TeamCounts,
 } from '@/lib/game-settings'
 import { getGameActions, setGameActions as persistGameActions, type GameAction } from '@/lib/game-actions'
-import { GAME_ROLES, getGameActivePlayerId, getGameCorruptedActionId, getGamePlayers, getGameRoundEndsAt, getGameRoundLossPenalty, getGameRoundNumber, getGameSaboteurHasHadTurn, getGameTurnEndsAt, getGameValues, getGameVoting, getGameVotingActionIds, getGameWinnerIds, getGameWinningMessage, setGameActivePlayerId as persistGameActivePlayerId, setGameCorruptedActionId as persistGameCorruptedActionId, setGamePlayers as persistGamePlayers, setGameRoundEndsAt as persistGameRoundEndsAt, setGameRoundLossPenalty as persistGameRoundLossPenalty, setGameRoundNumber as persistGameRoundNumber, setGameSaboteurHasHadTurn as persistGameSaboteurHasHadTurn, setGameTurnEndsAt as persistGameTurnEndsAt, setGameValues as persistGameValues, setGameVoting as persistGameVoting, setGameVotingActionIds as persistGameVotingActionIds, setGameWinnerIds as persistGameWinnerIds, setGameWinningMessage as persistGameWinningMessage, type GamePlayer, type GamePlayerAction, type GameRole } from '@/lib/game-session'
+import { canAddAtout, GAME_ATOUTS, GAME_ROLES, getGameActivePlayerId, getGameAtout, getGamePlayers, getGameRoundEndsAt, getGameRoundLossPenalty, getGameRoundNumber, getGameTurnEndsAt, getGameValues, getGameVoting, getGameVotingActionIds, getGameWinnerIds, getGameWinningMessage, setGameActivePlayerId as persistGameActivePlayerId, setGamePlayers as persistGamePlayers, setGameRoundEndsAt as persistGameRoundEndsAt, setGameRoundLossPenalty as persistGameRoundLossPenalty, setGameRoundNumber as persistGameRoundNumber, setGameTurnEndsAt as persistGameTurnEndsAt, setGameValues as persistGameValues, setGameVoting as persistGameVoting, setGameVotingActionIds as persistGameVotingActionIds, setGameWinnerIds as persistGameWinnerIds, setGameWinningMessage as persistGameWinningMessage, type GamePlayer, type GamePlayerAction, type GameRole } from '@/lib/game-session'
 import { generateActionPreview, getGeneratedActionEqualityKey } from '@/lib/action-template'
 import { createActionProfileExport, createElementProfileExport, dataUrlToBlob, downloadProfileExport, parseProfileExport } from '@/lib/profile-transfer'
 import {
@@ -19,6 +19,8 @@ import {
   setElementProfiles as persistElementProfiles,
   type GameProfile,
 } from '@/lib/game-profiles'
+
+const SABOTEUR_CORRUPTED_ACTION_VALUE_KEY = 'saboteur-corrupted-action-id'
 
 interface GameContextValue {
   actionElements: ActionElement[]
@@ -53,9 +55,6 @@ interface GameContextValue {
   gamePlayers: GamePlayer[]
   getValue: <Value>(key: string, defaultValue: Value) => Value
   activePlayerId?: string
-  canCorruptGameAction: boolean
-  corruptedActionId?: string
-  corruptGameAction: (actionId: string, isSelected: boolean) => void
   roundEndsAt?: number
   roundNumber: number
   selectActivePlayer: (playerId: string, turnDuration: number) => void
@@ -109,16 +108,12 @@ function GameProvider(props: GameProviderProps) {
   const [turnEndsAt, setTurnEndsAt] = useState<number>()
   const [isVoting, setIsVoting] = useState(false)
   const [selectedVotingActionIds, setSelectedVotingActionIds] = useState<string[]>([])
-  const [corruptedActionId, setCorruptedActionId] = useState<string>()
-  const [hasSaboteurHadTurn, setHasSaboteurHadTurn] = useState(false)
   const [winnerIds, setWinnerIds] = useState<string[]>([])
   const [winningMessage, setWinningMessage] = useState('')
   const [roundLossPenalty, setRoundLossPenalty] = useState(0)
   const gameValues = useRef<Record<string, unknown>>({})
   const [isGameRoundLoaded, setIsGameRoundLoaded] = useState(false)
   const [isGameSettingsLoaded, setIsGameSettingsLoaded] = useState(false)
-  const activePlayer = gamePlayers.find((player) => player.id === activePlayerId)
-  const canCorruptGameAction = Boolean(roundEndsAt && activePlayer?.role.name === GAME_ROLES[1].name && !hasSaboteurHadTurn)
 
   function getValue<Value>(key: string, defaultValue: Value): Value {
     return Object.prototype.hasOwnProperty.call(gameValues.current, key) ? gameValues.current[key] as Value : defaultValue
@@ -148,7 +143,7 @@ function GameProvider(props: GameProviderProps) {
   useEffect(() => {
     let isMounted = true
 
-    void Promise.all([getGameRoundEndsAt(), getGameTurnEndsAt(), getGameActivePlayerId(), getGameVoting(), getGameVotingActionIds(), getGameCorruptedActionId(), getGameSaboteurHasHadTurn(), getGameWinnerIds(), getGameWinningMessage(), getGameRoundLossPenalty(), getGameValues(), getGameRoundNumber()]).then(([storedRoundEndsAt, storedTurnEndsAt, storedActivePlayerId, storedIsVoting, storedVotingActionIds, storedCorruptedActionId, storedSaboteurHasHadTurn, storedWinnerIds, storedWinningMessage, storedRoundLossPenalty, storedGameValues, storedRoundNumber]) => {
+    void Promise.all([getGameRoundEndsAt(), getGameTurnEndsAt(), getGameActivePlayerId(), getGameVoting(), getGameVotingActionIds(), getGameWinnerIds(), getGameWinningMessage(), getGameRoundLossPenalty(), getGameValues(), getGameRoundNumber()]).then(([storedRoundEndsAt, storedTurnEndsAt, storedActivePlayerId, storedIsVoting, storedVotingActionIds, storedWinnerIds, storedWinningMessage, storedRoundLossPenalty, storedGameValues, storedRoundNumber]) => {
       if (isMounted) {
         setRoundEndsAt(storedRoundEndsAt)
         setRoundNumber(storedRoundNumber || (storedRoundEndsAt || storedIsVoting ? 1 : 0))
@@ -156,8 +151,6 @@ function GameProvider(props: GameProviderProps) {
         setActivePlayerId(storedActivePlayerId)
         setIsVoting(storedIsVoting)
         setSelectedVotingActionIds(storedVotingActionIds)
-        setCorruptedActionId(storedCorruptedActionId)
-        setHasSaboteurHadTurn(storedSaboteurHasHadTurn)
         setWinnerIds(storedWinnerIds)
         setWinningMessage(storedWinningMessage)
         setRoundLossPenalty(storedRoundLossPenalty)
@@ -305,8 +298,6 @@ function GameProvider(props: GameProviderProps) {
       setTurnEndsAt(undefined)
       setIsVoting(false)
       setSelectedVotingActionIds([])
-      setCorruptedActionId(undefined)
-      setHasSaboteurHadTurn(false)
       setWinnerIds(innocentWinnerIds)
       setWinningMessage('Les innocents ont gagnés !')
       setRoundLossPenalty(0)
@@ -317,8 +308,6 @@ function GameProvider(props: GameProviderProps) {
         persistGameTurnEndsAt(undefined),
         persistGameVoting(false),
         persistGameVotingActionIds([]),
-        persistGameCorruptedActionId(undefined),
-        persistGameSaboteurHasHadTurn(false),
         persistGameWinnerIds(innocentWinnerIds),
         persistGameWinningMessage('Les innocents ont gagnés !'),
         persistGameRoundLossPenalty(0),
@@ -337,8 +326,6 @@ function GameProvider(props: GameProviderProps) {
     setTurnEndsAt(undefined)
     setIsVoting(false)
     setSelectedVotingActionIds([])
-    setCorruptedActionId(undefined)
-    setHasSaboteurHadTurn(false)
     setWinnerIds([])
     setWinningMessage('')
     setRoundLossPenalty(0)
@@ -351,8 +338,6 @@ function GameProvider(props: GameProviderProps) {
       persistGameTurnEndsAt(undefined),
       persistGameVoting(false),
       persistGameVotingActionIds([]),
-      persistGameCorruptedActionId(undefined),
-      persistGameSaboteurHasHadTurn(false),
       persistGameWinnerIds([]),
       persistGameWinningMessage(''),
       persistGameRoundLossPenalty(0),
@@ -369,8 +354,6 @@ function GameProvider(props: GameProviderProps) {
     setTurnEndsAt(undefined)
     setIsVoting(false)
     setSelectedVotingActionIds([])
-    setCorruptedActionId(undefined)
-    setHasSaboteurHadTurn(false)
     setWinnerIds([])
     setWinningMessage('')
     setRoundLossPenalty(0)
@@ -383,8 +366,6 @@ function GameProvider(props: GameProviderProps) {
       persistGameTurnEndsAt(undefined),
       persistGameVoting(false),
       persistGameVotingActionIds([]),
-      persistGameCorruptedActionId(undefined),
-      persistGameSaboteurHasHadTurn(false),
       persistGameWinnerIds([]),
       persistGameWinningMessage(''),
       persistGameRoundLossPenalty(0),
@@ -409,6 +390,7 @@ function GameProvider(props: GameProviderProps) {
 
   function startGameRound(roundDuration: number, turnDuration: number, roundLossDuration: number) {
     const now = Date.now()
+    const corruptedActionId = getValue<string | null>(SABOTEUR_CORRUPTED_ACTION_VALUE_KEY, null)
     const totalActionCount = gamePlayers.filter((player) => !player.eliminated).reduce((total, player) => total + (player.actions?.length ?? 0), 0)
     const isRoundWon = isVoting && selectedVotingActionIds.length >= Math.ceil(totalActionCount / 2)
     const hasLostRound = isVoting && !isRoundWon
@@ -430,8 +412,6 @@ function GameProvider(props: GameProviderProps) {
       setTurnEndsAt(undefined)
       setIsVoting(false)
       setSelectedVotingActionIds([])
-      setCorruptedActionId(undefined)
-      setHasSaboteurHadTurn(false)
       setWinnerIds(nextWinnerIds)
       setWinningMessage('Les saboteurs ont gagnés !')
       setRoundLossPenalty(0)
@@ -442,8 +422,6 @@ function GameProvider(props: GameProviderProps) {
         persistGameTurnEndsAt(undefined),
         persistGameVoting(false),
         persistGameVotingActionIds([]),
-        persistGameCorruptedActionId(undefined),
-        persistGameSaboteurHasHadTurn(false),
         persistGameWinnerIds(nextWinnerIds),
         persistGameWinningMessage('Les saboteurs ont gagnés !'),
         persistGameRoundLossPenalty(0),
@@ -462,8 +440,6 @@ function GameProvider(props: GameProviderProps) {
     setTurnEndsAt(turnEndsAt)
     setIsVoting(false)
     setSelectedVotingActionIds([])
-    setCorruptedActionId(undefined)
-    setHasSaboteurHadTurn(false)
     setWinnerIds([])
     setWinningMessage('')
     setRoundLossPenalty(nextRoundLossPenalty)
@@ -474,8 +450,6 @@ function GameProvider(props: GameProviderProps) {
     void persistGameTurnEndsAt(turnEndsAt)
     void persistGameVoting(false)
     void persistGameVotingActionIds([])
-    void persistGameCorruptedActionId(undefined)
-    void persistGameSaboteurHasHadTurn(false)
     void persistGameWinnerIds([])
     void persistGameWinningMessage('')
     void persistGameRoundLossPenalty(nextRoundLossPenalty)
@@ -483,11 +457,6 @@ function GameProvider(props: GameProviderProps) {
 
   function selectActivePlayer(playerId: string, turnDuration: number) {
     if (!gamePlayers.some((player) => player.id === playerId && !player.eliminated)) return
-
-    if (activePlayer?.role.name === GAME_ROLES[1].name && !hasSaboteurHadTurn) {
-      setHasSaboteurHadTurn(true)
-      void persistGameSaboteurHasHadTurn(true)
-    }
 
     const turnEndsAt = Date.now() + (turnDuration * 1000)
     setActivePlayerId(playerId)
@@ -502,14 +471,6 @@ function GameProvider(props: GameProviderProps) {
       : selectedVotingActionIds.filter((id) => id !== actionId)
     setSelectedVotingActionIds(nextActionIds)
     void persistGameVotingActionIds(nextActionIds)
-  }
-
-  function corruptGameAction(actionId: string, isSelected: boolean) {
-    if (!canCorruptGameAction || !gamePlayers.some((player) => player.actions?.some((action) => action.id === actionId))) return
-
-    const nextCorruptedActionId = isSelected ? actionId : undefined
-    setCorruptedActionId(nextCorruptedActionId)
-    void persistGameCorruptedActionId(nextCorruptedActionId)
   }
 
   function replaceGamePlayers(players: GamePlayer[]) {
@@ -530,7 +491,17 @@ function GameProvider(props: GameProviderProps) {
       ;[roles[index], roles[swapIndex]] = [roles[swapIndex], roles[index]]
     }
 
-    replaceGamePlayers(gamePlayers.map((player, index) => ({ ...player, actions: undefined, role: roles[index] })))
+    const reassignedPlayers = gamePlayers.map((player, index) => ({
+      ...player,
+      actions: undefined,
+      atouts: (player.atouts ?? []).filter((atout) => !getGameAtout(atout.id)?.autoDistribute),
+      role: roles[index],
+    }))
+
+    reassignedPlayers.forEach((player) => {
+      GAME_ATOUTS.filter((atout) => atout.autoDistribute === player.role.name && canAddAtout(player.atouts, atout)).forEach((atout) => player.atouts.push(atout))
+    })
+    replaceGamePlayers(reassignedPlayers)
   }
 
   async function addAction(action: GameAction): Promise<void> {
@@ -741,9 +712,6 @@ function GameProvider(props: GameProviderProps) {
         gamePlayers,
         getValue,
         activePlayerId,
-        canCorruptGameAction,
-        corruptedActionId,
-        corruptGameAction,
         roundEndsAt,
         roundNumber,
         turnEndsAt,

@@ -1,7 +1,9 @@
 import { type GeneratedActionSegment } from '@/lib/action-template'
 import { idbGet, idbSet } from '@/lib/idb-store'
 import { type ReactNode } from 'react'
-import loupeIcon from '@/assets/atouts/loupe.svg?url'
+import { loupeAtout } from '@/lib/atouts/loupe-atout'
+import { mastermindAtout } from '@/lib/atouts/mastermind-atout'
+import { saboteurAtout } from '@/lib/atouts/saboteur-atout'
 import innocentIcon from '@/assets/roles/innocent.svg?url'
 import saboteurIcon from '@/assets/roles/saboteur.svg?url'
 
@@ -12,20 +14,15 @@ const GAME_ROUND_NUMBER_KEY = 'game-round-number'
 const GAME_TURN_ENDS_AT_KEY = 'game-turn-ends-at'
 const GAME_VOTING_KEY = 'game-voting'
 const GAME_VOTING_ACTION_IDS_KEY = 'game-voting-action-ids'
-const GAME_CORRUPTED_ACTION_ID_KEY = 'game-corrupted-action-id'
-const GAME_SABOTEUR_HAS_HAD_TURN_KEY = 'game-saboteur-has-had-turn'
 const GAME_WINNER_IDS_KEY = 'game-winner-ids'
 const GAME_WINNING_MESSAGE_KEY = 'game-winning-message'
 const GAME_ROUND_LOSS_PENALTY_KEY = 'game-round-loss-penalty'
 const GAME_VALUES_KEY = 'game-values'
 
-export const ATOUT_IDS = {
-  LOUPE: 'loupe',
-} as const
-
 export interface GameAtoutContext {
-  addControlButton: (label: string, backgroundColor: string | undefined, onClick: () => void) => () => void
-  enableAbility: (label: string, enabled: boolean) => void
+  addGroupButton: (groups: GameAtoutButtonGroup[]) => () => void
+  atoutId: AtoutId
+  enableAbility: (target: [playerId: string, atoutId: AtoutId, label: string], enabled: boolean) => void
   gameState: GameAtoutGameState
   getValue: <Value>(key: string, defaultValue: Value) => Value
   onPlayerPressed: (callback: (playerId: string) => void) => () => void
@@ -35,7 +32,19 @@ export interface GameAtoutContext {
   setValue: <Value>(key: string, value: Value) => void
 }
 
+export interface GameAtoutButton {
+  backgroundColor?: string
+  label: string
+  onClick: () => void
+}
+
+export interface GameAtoutButtonGroup {
+  buttons: GameAtoutButton[]
+  description: string
+}
+
 export interface GameAtoutGameState {
+  activePlayerId?: string
   roundEndsAt?: number
   roundNumber: number
   turnEndsAt?: number
@@ -47,19 +56,26 @@ export interface GameAtoutAbility {
   onClick: (context: GameAtoutContext) => void
 }
 
-export interface GameAtout {
-  abilities: GameAtoutAbility[]
-  id: string
-  icon: string
-  name: string
+export type GameRoleName = 'Innocent' | 'Saboteur'
+
+export interface GameAtoutDefinition {
+  abilities: readonly GameAtoutAbility[]
+  appliesToAllPlayers?: boolean
+  autoDistribute?: GameRoleName
   description: string
+  id: string
+  icon?: string
+  name: string
   onRoundStart?: (context: GameAtoutContext) => void
+  onTurnEnd?: (context: GameAtoutContext) => void
+  onTurnStart?: (context: GameAtoutContext) => void
+  visible?: boolean
 }
 
 export interface GameRole {
   description: string
   icon: string
-  name: string
+  name: GameRoleName
 }
 
 export const GAME_ROLES: GameRole[] = [
@@ -75,36 +91,33 @@ export const GAME_ROLES: GameRole[] = [
   },
 ]
 
-export const GAME_ATOUTS: GameAtout[] = [
-  {
-    abilities: [{
-      label: 'Utiliser',
-      onClick: (context) => {
-        let removeControlButton: () => void = () => undefined
-        const stopListeningForPlayer = context.onPlayerPressed((playerId) => {
-          const player = context.players.find((currentPlayer) => currentPlayer.id === playerId)
-          if (!player) return
-          
-          stopListeningForPlayer();
-          removeControlButton();
-          context.enableAbility('Utiliser', false);
-          context.openDialog('Analyse', player.corrupted ? `${player.name} est corrompu.` : `${player.name} n’est pas corrompu.`);
-        })
-        removeControlButton = context.addControlButton('Arrêter l’analyse', 'var(--color-game-red)', () => {
-          stopListeningForPlayer()
-          removeControlButton()
-        })
-      },
-    }],
-    description: 'Utilisable une fois par manche, permet de découvrir si un joueur est corrompu.',
-    icon: loupeIcon,
-    id: ATOUT_IDS.LOUPE,
-    name: 'Loupe',
-    onRoundStart: (context) => {
-      context.enableAbility('Utiliser', true);
-    },
-  },
+export const GAME_ATOUTS: GameAtoutDefinition[] = [
+  loupeAtout,
+  mastermindAtout,
+  saboteurAtout,
 ]
+
+export type AtoutId = (typeof GAME_ATOUTS)[number]['id']
+
+export const atoutRelations: Partial<Record<AtoutId, AtoutId[]>> = {
+  loupe: [],
+  mastermind: [],
+  saboteur: [],
+}
+
+export interface GameAtout {
+  readonly abilities: readonly GameAtoutAbility[]
+  readonly appliesToAllPlayers?: boolean
+  readonly autoDistribute?: GameRoleName
+  readonly description: string
+  readonly icon?: string
+  readonly id: AtoutId
+  readonly name: string
+  readonly onRoundStart?: (context: GameAtoutContext) => void
+  readonly onTurnEnd?: (context: GameAtoutContext) => void
+  readonly onTurnStart?: (context: GameAtoutContext) => void
+  readonly visible?: boolean
+}
 
 export function getGameRole(name: string): GameRole | undefined {
   return GAME_ROLES.find((role) => role.name === name)
@@ -112,6 +125,15 @@ export function getGameRole(name: string): GameRole | undefined {
 
 export function getGameAtout(id: string): GameAtout | undefined {
   return GAME_ATOUTS.find((atout) => atout.id === id)
+}
+
+function canLiveWith(atout: GameAtout, otherAtout: GameAtout): boolean {
+  const relations = atoutRelations[atout.id]
+  return Array.isArray(relations) && (relations.length === 0 || relations.includes(otherAtout.id))
+}
+
+export function canAddAtout(atouts: GameAtout[], atout: GameAtout): boolean {
+  return atouts.every((currentAtout) => canLiveWith(atout, currentAtout) && canLiveWith(currentAtout, atout))
 }
 
 export interface GamePlayerAction {
@@ -136,16 +158,12 @@ export async function getGamePlayers(): Promise<GamePlayer[]> {
   const players = (await idbGet<Array<Omit<GamePlayer, 'atouts'> & { atouts?: Array<GameAtout | string> }>>(GAME_PLAYERS_KEY)) ?? []
 
   return players.map((player) => {
-    const hasLegacyAnalystRole = player.role.name === 'L’Analyste'
-    const atoutIds = [
-      ...(player.atouts?.map((atout) => typeof atout === 'string' ? atout : atout.id) ?? []),
-      ...(hasLegacyAnalystRole ? [ATOUT_IDS.LOUPE] : []),
-    ]
+    const atoutIds = player.atouts?.map((atout) => typeof atout === 'string' ? atout : atout.id) ?? []
 
     return {
       ...player,
       atouts: atoutIds.map(getGameAtout).filter((atout): atout is GameAtout => Boolean(atout)),
-      role: getGameRole(hasLegacyAnalystRole ? GAME_ROLES[0].name : player.role.name) ?? GAME_ROLES[0],
+      role: getGameRole(player.role.name) ?? GAME_ROLES[0],
     }
   })
 }
@@ -203,22 +221,6 @@ export async function getGameVotingActionIds(): Promise<string[]> {
 
 export function setGameVotingActionIds(actionIds: string[]): Promise<void> {
   return idbSet(GAME_VOTING_ACTION_IDS_KEY, actionIds)
-}
-
-export async function getGameCorruptedActionId(): Promise<string | undefined> {
-  return (await idbGet<string | null>(GAME_CORRUPTED_ACTION_ID_KEY)) ?? undefined
-}
-
-export function setGameCorruptedActionId(actionId: string | undefined): Promise<void> {
-  return idbSet(GAME_CORRUPTED_ACTION_ID_KEY, actionId ?? null)
-}
-
-export async function getGameSaboteurHasHadTurn(): Promise<boolean> {
-  return (await idbGet<boolean>(GAME_SABOTEUR_HAS_HAD_TURN_KEY)) ?? false
-}
-
-export function setGameSaboteurHasHadTurn(hasHadTurn: boolean): Promise<void> {
-  return idbSet(GAME_SABOTEUR_HAS_HAD_TURN_KEY, hasHadTurn)
 }
 
 export async function getGameWinnerIds(): Promise<string[]> {

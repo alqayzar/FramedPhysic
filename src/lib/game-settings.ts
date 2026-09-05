@@ -1,5 +1,4 @@
 import { idbGet, idbSet } from '@/lib/idb-store'
-import { ATOUT_IDS } from '@/lib/game-session'
 
 const GAME_SETTINGS_KEY = 'game-settings'
 
@@ -39,7 +38,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
 }
 
 export async function getGameSettings(): Promise<GameSettings> {
-  const settings = await idbGet<Partial<GameSettings> & { enabledRoleNames?: string[] }>(GAME_SETTINGS_KEY)
+  const settings = await idbGet<Partial<GameSettings>>(GAME_SETTINGS_KEY)
 
   return {
     roundLossTimeout: { ...DEFAULT_GAME_SETTINGS.roundLossTimeout, ...settings?.roundLossTimeout },
@@ -47,7 +46,7 @@ export async function getGameSettings(): Promise<GameSettings> {
     turnTimeout: { ...DEFAULT_GAME_SETTINGS.turnTimeout, ...settings?.turnTimeout },
     teamCounts: { ...DEFAULT_GAME_SETTINGS.teamCounts, ...settings?.teamCounts },
     actionsPerPlayer: { ...DEFAULT_GAME_SETTINGS.actionsPerPlayer, ...settings?.actionsPerPlayer },
-    enabledAtoutIds: settings?.enabledAtoutIds ?? (settings?.enabledRoleNames?.includes('L’Analyste') ? [ATOUT_IDS.LOUPE] : []),
+    enabledAtoutIds: settings?.enabledAtoutIds ?? DEFAULT_GAME_SETTINGS.enabledAtoutIds,
     showRoleAfterElimination: settings?.showRoleAfterElimination ?? DEFAULT_GAME_SETTINGS.showRoleAfterElimination,
   }
 }

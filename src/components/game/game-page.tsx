@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { EmojiPickerDialog } from '@/components/settings/emoji-picker-dialog'
 import { useGame } from '@/contexts/game-context'
 import { createEmojiImage } from '@/lib/emoji-image'
-import { GAME_ATOUTS, GAME_ROLES, type GameAtout, type GameRole } from '@/lib/game-session'
+import { canAddAtout, GAME_ATOUTS, GAME_ROLES, type GameAtout, type GameRole } from '@/lib/game-session'
 import { createSquareImage } from '@/lib/square-image'
 import { cn } from '@/lib/utils'
 import { Camera, Smile, Trash2 } from 'lucide-react'
@@ -35,10 +35,15 @@ function shuffleAssignments(innocents: number, saboteurs: number, enabledAtoutId
     ...Array.from({ length: saboteurs }, () => ({ atouts: [], role: GAME_ROLES[1] })),
   ]
 
-  GAME_ATOUTS.filter((atout) => enabledAtoutIds.includes(atout.id)).forEach((atout) => {
-    const innocentAssignments = assignments.filter((assignment) => assignment.role.name === GAME_ROLES[0].name)
-    const recipient = innocentAssignments[Math.floor(Math.random() * innocentAssignments.length)]
-    if (recipient) recipient.atouts.push(atout)
+  GAME_ATOUTS.filter((atout) => atout.autoDistribute || enabledAtoutIds.includes(atout.id)).forEach((atout) => {
+    const appliesToAllPlayers = (atout as GameAtout).appliesToAllPlayers === true
+    const eligibleAssignments = assignments.filter((assignment) => (atout.autoDistribute ? assignment.role.name === atout.autoDistribute : appliesToAllPlayers || assignment.role.name === GAME_ROLES[0].name) && canAddAtout(assignment.atouts, atout))
+
+    if (atout.autoDistribute || appliesToAllPlayers) eligibleAssignments.forEach((assignment) => assignment.atouts.push(atout))
+    else {
+      const recipient = eligibleAssignments[Math.floor(Math.random() * eligibleAssignments.length)]
+      if (recipient) recipient.atouts.push(atout)
+    }
   })
 
   for (let index = assignments.length - 1; index > 0; index -= 1) {

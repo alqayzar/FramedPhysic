@@ -7,6 +7,7 @@ import { Crown, Eye } from 'lucide-react'
 interface GamePlayerCardProps {
   isActive: boolean
   isEliminated: boolean
+  isLobby: boolean
   isRoundRunning: boolean
   isTargetSelectionEnabled?: boolean
   isVoting: boolean
@@ -23,7 +24,7 @@ function GamePlayerCard(props: GamePlayerCardProps) {
     props.onRoleSelect(props.player.id)
   }
 
-  const isSelectable = !props.isEliminated && (props.isRoleSelectionEnabled || props.isRoundRunning || props.isTargetSelectionEnabled || props.isVoting)
+  const isSelectable = !props.isEliminated && (props.isLobby || props.isRoleSelectionEnabled || props.isRoundRunning || props.isTargetSelectionEnabled || props.isVoting)
   const crownRotations = ['-rotate-6', '-rotate-3', 'rotate-3', 'rotate-6']
   const crownRotation = crownRotations[[...props.player.id].reduce((total, character) => total + character.charCodeAt(0), 0) % crownRotations.length]
 
