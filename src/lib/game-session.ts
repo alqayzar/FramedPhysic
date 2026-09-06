@@ -111,10 +111,10 @@ export const GAME_ATOUTS: GameAtoutDefinition[] = [
 export type AtoutId = (typeof GAME_ATOUTS)[number]['id']
 
 export const atoutRelations: Partial<Record<AtoutId, AtoutId[]>> = {
-  loupe: [],
-  protection: [],
-  mastermind: [],
-  saboteur: [],
+  loupe: ['mastermind', 'saboteur'],
+  protection: ['mastermind', 'saboteur'],
+  mastermind: ['loupe', 'protection', 'saboteur'],
+  saboteur: ['mastermind'],
 }
 
 export interface GameAtout {
