@@ -40,7 +40,7 @@ interface GameContextValue {
   updateAction: (action: GameAction) => Promise<void>
   actionElementsError: string
   addElementProfile: (title: string) => Promise<void>
-  clearElementProfile: (id: string) => Promise<void>
+  clearElementProfile: (id: string, elementIds?: string[]) => Promise<void>
   deleteActionElement: (id: string) => Promise<void>
   deleteElementProfile: (id: string) => Promise<void>
   exportElementProfile: (id: string, title: string) => Promise<void>
@@ -570,8 +570,9 @@ function GameProvider(props: GameProviderProps) {
     setActionElements(nextElements)
   }
 
-  async function clearElementProfile(id: string): Promise<void> {
-    const nextElements = actionElements.filter((element) => element.profileId !== id)
+  async function clearElementProfile(id: string, elementIds?: string[]): Promise<void> {
+    const idsToClear = elementIds ? new Set(elementIds) : undefined
+    const nextElements = actionElements.filter((element) => element.profileId !== id || (idsToClear !== undefined && !idsToClear.has(element.id)))
     await persistActionElements(nextElements)
     setActionElements(nextElements)
   }

@@ -3,15 +3,15 @@ import { GeneratedActionElementButton } from '@/components/actions/generated-act
 import { GeneratedElementViewer } from '@/components/actions/generated-element-viewer';
 import { Button } from '@/components/ui/button';
 import { type ActionElement } from '@/lib/action-elements';
-import { type GameAtoutContext, type GameAtoutDefinition } from '@/lib/game-session';
+import { type GameAtoutDefinition } from '@/lib/game-session';
 import icon from '@/assets/atouts/mastermind.svg?url';
+import { SABOTEUR_CORRUPTED_ACTION_VALUE_KEY } from './saboteur-atout';
 
 const MASTERMIND_SELECTED_ELEMENT_VALUE_KEY = 'mastermind-selected-element';
-const SABOTEUR_CORRUPTED_ACTION_VALUE_KEY = 'saboteur-corrupted-action-id';
 
 interface MastermindElementsProps {
-  context: GameAtoutContext;
   elements: ActionElement[];
+  onSelectedElementsChange: (elements: ActionElement[]) => void;
   previousSelectedElements: ActionElement[];
   previousSelectedElementCount: number;
 }
@@ -33,7 +33,7 @@ function MastermindElements(props: MastermindElementsProps) {
     else nextSelectedElementIds.add(selectedElement.id);
 
     setSelectedElementIds(nextSelectedElementIds);
-    props.context.setValue(MASTERMIND_SELECTED_ELEMENT_VALUE_KEY, nextSelectedElementIds.size > 0 ? elements.filter((element) => nextSelectedElementIds.has(element.id)) : null);
+    props.onSelectedElementsChange(elements.filter((element) => nextSelectedElementIds.has(element.id)));
     setSelectedElement(undefined);
   }
 
@@ -43,23 +43,26 @@ function MastermindElements(props: MastermindElementsProps) {
     <>
       {props.previousSelectedElements.length > 0 && (
         <section className="mb-5 rounded-xl border-3 border-game-ink bg-game-yellow/30 p-3">
-          <p className="text-sm font-black">Le joueur précédent a :</p>
-          <ul className="mt-2 flex flex-wrap gap-1">
+          <p className="text-sm font-black">Le joueur précédent a trouvé</p>
+          <p className="text-sm font-bold text-game-ink/65">{props.previousSelectedElementCount} bon{props.previousSelectedElementCount > 1 ? 's' : ''} élément{props.previousSelectedElementCount > 1 ? 's' : ''}</p>
+          <ul className="flex flex-wrap gap-1">
             {props.previousSelectedElements.map((element) => (
               <li key={element.id}>
                 <GeneratedActionElementButton element={element} onSelect={setSelectedElement} />
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-sm font-bold text-game-ink/65">{props.previousSelectedElementCount} bon{props.previousSelectedElementCount > 1 ? 's' : ''} élément{props.previousSelectedElementCount > 1 ? 's' : ''}</p>
         </section>
       )}
       {elements.length === 0 ? <p>Aucun élément n’est actuellement assigné.</p> : (
         <div className="max-h-[45svh] overflow-y-auto">
           <ul className="flex flex-wrap gap-1">
             {elements.map((element) => (
-              <li className={selectedElementIds.has(element.id) ? 'flex rounded-lg ring-8 ring-inset ring-game-green' : 'flex'} key={element.id}>
+              <li className="relative flex" key={element.id}>
                 <GeneratedActionElementButton element={element} onSelect={setSelectedElement} />
+                {selectedElementIds.has(element.id) &&
+                  <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-lg ring-4 ring-inset ring-game-green/80" />
+                }
               </li>
             ))}
           </ul>
@@ -95,6 +98,11 @@ export const mastermindAtout: GameAtoutDefinition = {
   abilities: [{
     label: 'Utiliser',
     onClick: (context) => {
+      let selectedElements: ActionElement[] = [];
+      function handleSelectedElementsChange(nextElements: ActionElement[]) {
+        selectedElements = nextElements;
+      }
+
       const elements = context.players
         .flatMap((player) => player.actions ?? [])
         .flatMap((action) => action.segments)
@@ -107,8 +115,19 @@ export const mastermindAtout: GameAtoutDefinition = {
       const corruptedActionElementIds = new Set(corruptedAction?.segments.filter((segment) => segment.type === 'element').map((segment) => segment.element.id));
       const previousSelectedElementCount = previousSelectedElements.filter((element) => corruptedActionElementIds.has(element.id)).length;
 
-      context.enableAbility([context.playerId, context.atoutId, 'Utiliser'], false);
-      context.openDialog('Mastermind', <MastermindElements context={context} elements={elements} previousSelectedElements={previousSelectedElements} previousSelectedElementCount={previousSelectedElementCount} />);
+      context.openDialog({
+        content: <MastermindElements elements={elements} onSelectedElementsChange={handleSelectedElementsChange} previousSelectedElements={previousSelectedElements} previousSelectedElementCount={previousSelectedElementCount} />,
+        onCancel: () => {
+          context.setValue(MASTERMIND_SELECTED_ELEMENT_VALUE_KEY, null);
+        },
+        onOk: () => {
+          if (selectedElements.length > 0) {
+            context.setValue(MASTERMIND_SELECTED_ELEMENT_VALUE_KEY, selectedElements.length > 0 ? selectedElements : null);
+            context.enableAbility([context.playerId, context.atoutId, 'Utiliser'], false);
+          }
+        },
+        title: 'Mastermind',
+      });
     },
   }]
 };

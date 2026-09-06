@@ -61,8 +61,7 @@ function ActionDialog(props: ActionDialogProps) {
     const before = template.slice(0, start)
     const after = template.slice(end)
     const isInsideFilter = before.lastIndexOf('{') > before.lastIndexOf('}')
-    const filterContents = before.slice(before.lastIndexOf('{') + 1).trim()
-    const insertion = isInsideFilter ? `${filterContents ? ',' : ''}${tag}` : `{${tag}}`
+    const insertion = isInsideFilter ? tag : `{${tag}}`
     const nextTemplate = `${before}${insertion}${after}`
 
     setTemplate(nextTemplate)
@@ -137,18 +136,6 @@ function ActionDialog(props: ActionDialogProps) {
               />
             </label>
 
-            <section className="mt-6" aria-labelledby="syntax-title">
-              <div className="flex items-center gap-2">
-                <Braces aria-hidden="true" className="size-5 text-game-purple" />
-                <h3 id="syntax-title" className="text-base font-black">Syntaxe des filtres</h3>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-game-ink/70">
-                 <code className="font-bold text-game-purple">{'{tag1,tag2}'}</code> accepte tag1 ou tag2.{' '}
-                 <code className="font-bold text-game-purple">{'{tag1&tag3,tag2}'}</code> accepte tag1 avec tag3, ou tag2.{' '}
-                 <code className="font-bold text-game-purple">{'{tag1&-tag2}'}</code> accepte tag1 sans tag2.
-              </p>
-            </section>
-
             {props.availableTags.length > 0 && (
               <section className="mt-5" aria-labelledby="available-tags-title">
                 <div className="flex items-center gap-2">
@@ -156,6 +143,17 @@ function ActionDialog(props: ActionDialogProps) {
                   <h3 id="available-tags-title" className="text-sm font-black">Tags existants</h3>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
+                  {[[" ET ", "ET"], [" OU ", "OU"], ['-', '-'], ["=", "="]].map(operator => (
+                    <button
+                      className="rounded-full border-2 border-game-ink bg-white px-3 py-1.5 text-sm font-bold text-game-ink hover:bg-game-blue hover:text-white"
+                      data-tag={operator[0]}
+                      key={operator[0]}
+                      onClick={handleTagInsert}
+                      type="button"
+                    >
+                      {operator[1]}
+                    </button>
+                  ))}
                   {props.availableTags.map((tag) => (
                     <button
                       className="rounded-full border-2 border-game-ink bg-white px-3 py-1.5 text-sm font-bold text-game-ink hover:bg-game-blue hover:text-white"
@@ -170,6 +168,20 @@ function ActionDialog(props: ActionDialogProps) {
                 </div>
               </section>
             )}
+
+            <section className="mt-6" aria-labelledby="syntax-title">
+              <div className="flex items-center gap-2">
+                <Braces aria-hidden="true" className="size-5 text-game-purple" />
+                <h3 id="syntax-title" className="text-base font-black">Syntaxe des filtres</h3>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-game-ink/70">
+                 <code className="font-bold text-game-purple">{'{tag1 OU tag2}'}</code> accepte tag1 ou tag2.{' '}
+                 <code className="font-bold text-game-purple">{'{tag1 ET tag3 OU tag2}'}</code> accepte tag1 avec tag3, ou tag2.{' '}
+                 <code className="font-bold text-game-purple">{'{tag1 ET -tag2}'}</code> accepte tag1 sans tag2.
+                 <br />
+                 <code className="font-bold text-game-purple">{'{objet=tag1}'}</code> mémorise l’élément choisi, puis <code className="font-bold text-game-purple">{'{=objet}'}</code> réutilise exactement cet élément.
+              </p>
+            </section>
 
             <section className="mt-6 rounded-xl border-2 border-game-ink bg-game-yellow/35 p-4" aria-labelledby="preview-title">
               <h3 id="preview-title" className="text-sm font-black">Aperçu</h3>

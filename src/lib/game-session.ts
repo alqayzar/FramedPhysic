@@ -26,10 +26,17 @@ export interface GameAtoutContext {
   gameState: GameAtoutGameState
   getValue: <Value>(key: string, defaultValue: Value) => Value
   onPlayerPressed: (callback: (playerId: string) => void) => () => void
-  openDialog: (title?: ReactNode, content?: ReactNode) => void
+  openDialog: (options: GameAtoutDialogOptions) => void
   playerId: string
   players: GamePlayer[]
   setValue: <Value>(key: string, value: Value) => void
+}
+
+export interface GameAtoutDialogOptions {
+  content?: ReactNode
+  onCancel?: () => void
+  onOk?: () => void
+  title?: ReactNode
 }
 
 export interface GameAtoutButton {

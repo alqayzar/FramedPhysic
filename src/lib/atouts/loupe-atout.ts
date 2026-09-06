@@ -20,7 +20,7 @@ export const loupeAtout: GameAtoutDefinition = {
         stopListeningForPlayer();
         removeControlButtons();
         context.enableAbility([context.playerId, context.atoutId, 'Utiliser'], false);
-        context.openDialog('Analyse', player.corrupted ? `${player.name} est corrompu.` : `${player.name} n’est pas corrompu.`);
+        context.openDialog({ content: player.corrupted ? `${player.name} est corrompu.` : `${player.name} n’est pas corrompu.`, title: 'Analyse' });
       });
       removeControlButtons = context.addGroupButton([{
         buttons: [{

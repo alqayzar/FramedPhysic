@@ -15,11 +15,15 @@ function ActionTemplatePreview(props: ActionTemplatePreviewProps) {
     <p className="flex flex-wrap items-center gap-1.5 text-sm font-bold leading-7 text-game-ink">
       {segments.map((segment, index) => {
         if (segment.type === 'text') return <span key={`${segment.value}-${index}`}>{segment.value}</span>
+        if (segment.type === 'reference') {
+          return <span className="rounded-lg border-2 border-game-ink bg-game-blue px-2 py-1 text-xs text-white" key={`${segment.label}-${index}`}>= {segment.label}</span>
+        }
 
         return (
           <span className="inline-flex flex-wrap items-center gap-1 rounded-lg border-2 border-game-ink bg-game-yellow px-2 py-1" key={`${segment.filter.raw}-${index}`}>
+            {segment.label && <span className="rounded-full bg-game-blue px-1.5 py-0.5 text-xs text-white">{segment.label} =</span>}
             {segment.filter.alternatives.map((alternative, alternativeIndex) => (
-              <span className="inline-flex items-center gap-1" key={alternative.join('&')}>
+              <span className="inline-flex items-center gap-1" key={alternative.join(' ET ')}>
                 {alternativeIndex > 0 && <span className="text-xs text-game-ink/60">ou</span>}
                 {alternative.map((tag, tagIndex) => (
                   <span className="inline-flex items-center gap-1" key={tag}>

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { ChevronDown } from 'lucide-react';
 import saboteurIcon from '@/assets/roles/saboteur.svg?url';
 
-const SABOTEUR_CORRUPTED_ACTION_VALUE_KEY = 'saboteur-corrupted-action-id';
+export const SABOTEUR_CORRUPTED_ACTION_VALUE_KEY = 'saboteur-corrupted-action-id';
 
 interface CorruptionDialogProps {
   context: GameAtoutContext;
@@ -49,7 +49,7 @@ export const saboteurAtout: GameAtoutDefinition = {
   abilities: [{
     label: 'Corrompre',
     onClick: (context) => {
-      context.openDialog('Corrompre', <CorruptionDialog context={context} />);
+      context.openDialog({ content: <CorruptionDialog context={context} />, title: 'Corrompre' });
     },
   }],
   autoDistribute: 'Saboteur',

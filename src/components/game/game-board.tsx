@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { GeneratedActionViewer } from '@/components/actions/generated-action-viewer'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -14,7 +14,7 @@ import { GameTimer } from '@/components/game/game-timer'
 import { GameRoleIcon } from '@/components/game/game-role-icon'
 import { GameAtoutIcon } from '@/components/game/game-atout-icon'
 import { useGame } from '@/contexts/game-context'
-import { GAME_ROLES, getGameAtout, type AtoutId, type GameAtout, type GameAtoutButtonGroup, type GameAtoutContext } from '@/lib/game-session'
+import { GAME_ROLES, getGameAtout, type AtoutId, type GameAtout, type GameAtoutButtonGroup, type GameAtoutContext, type GameAtoutDialogOptions } from '@/lib/game-session'
 import { RefreshCw, Settings, UsersRound } from 'lucide-react'
 
 const ENABLED_ABILITIES_VALUE_KEY = '__enabled-abilities';
@@ -26,11 +26,6 @@ interface GameBoardProps {
 
 interface AtoutControlButtonGroup extends GameAtoutButtonGroup {
   id: string
-}
-
-interface AtoutDialogContent {
-  content?: ReactNode
-  title?: ReactNode
 }
 
 function GameBoard(props: GameBoardProps) {
@@ -53,7 +48,7 @@ function GameBoard(props: GameBoardProps) {
   const [atoutControlButtonGroups, setAtoutControlButtonGroups] = useState<AtoutControlButtonGroup[]>([])
   const [enabledAbilities, setEnabledAbilities] = useState<Record<string, boolean>>(() => getValue(ENABLED_ABILITIES_VALUE_KEY, {}))
   const [selectedStackItemId, setSelectedStackItemId] = useState<string>()
-  const [atoutDialog, setAtoutDialog] = useState<AtoutDialogContent>()
+  const [atoutDialog, setAtoutDialog] = useState<GameAtoutDialogOptions>()
   const [pendingEliminationPlayerId, setPendingEliminationPlayerId] = useState<string>()
 
   useEffect(() => {
@@ -255,12 +250,22 @@ function GameBoard(props: GameBoardProps) {
     }
   }
 
-  function openAtoutDialog(title?: ReactNode, content?: ReactNode) {
-    setAtoutDialog({ content, title })
+  function openAtoutDialog(options: GameAtoutDialogOptions) {
+    setAtoutDialog(options)
   }
 
   function handleAtoutDialogOpenChange(open: boolean) {
-    if (!open) setAtoutDialog(undefined)
+    if (!open) cancelAtoutDialog()
+  }
+
+  function confirmAtoutDialog() {
+    atoutDialog?.onOk?.()
+    setAtoutDialog(undefined)
+  }
+
+  function cancelAtoutDialog() {
+    atoutDialog?.onCancel?.()
+    setAtoutDialog(undefined)
   }
 
   function useAtoutAbility(atoutId: string, abilityIndex: number) {
@@ -412,10 +417,9 @@ function GameBoard(props: GameBoardProps) {
             <h1 className="text-3xl font-black tracking-[-0.06em]">{gamePlayers.length}</h1>
             <span aria-label="Rôles assignés" className="flex -space-x-2">
               {assignedRoleSummaries.map(({ count, role }) => (
-                <button aria-label={role.name} aria-pressed={selectedStackItemId === role.name} className="relative flex items-center" key={role.name} onClick={() => toggleStackItem(role.name)} type="button">
+                <button aria-label={`${role.name}: ${count}`} aria-pressed={selectedStackItemId === role.name} className="relative flex items-center" key={role.name} onClick={() => toggleStackItem(role.name)} type="button">
                   <GameRoleIcon className="size-8" role={role} />
-                  {role.name === GAME_ROLES[1].name && count > 1 && <span className="-ml-1 text-lg leading-none font-black">X{count}</span>}
-                  {selectedStackItemId === role.name && <span className="absolute -top-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-game-ink bg-white px-2 py-1 text-xs font-black shadow-[0_2px_0_0_#16171d]">{role.name}</span>}
+                  {selectedStackItemId === role.name && <span className="absolute -top-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-game-ink bg-white px-2 py-1 text-xs font-black shadow-[0_2px_0_0_#16171d]">{role.name} x{count}</span>}
                 </button>
               ))}
             </span>
@@ -526,7 +530,7 @@ function GameBoard(props: GameBoardProps) {
             {atoutDialog?.title && <DialogTitle className="text-2xl font-black tracking-[-0.04em]">{atoutDialog.title}</DialogTitle>}
           </DialogHeader>
           {atoutDialog?.content && <div className="mt-3 font-bold leading-6 text-game-ink/65">{atoutDialog.content}</div>}
-          <Button className="cartoon-press h-auto w-full rounded-xl border-4 border-game-ink bg-game-yellow px-5 py-3 text-lg font-black text-game-ink hover:bg-game-yellow" onClick={() => setAtoutDialog(undefined)} type="button">Ok</Button>
+          <Button className="cartoon-press h-auto w-full rounded-xl border-4 border-game-ink bg-game-yellow px-5 py-3 text-lg font-black text-game-ink hover:bg-game-yellow" onClick={confirmAtoutDialog} type="button">Ok</Button>
         </DialogContent>
       </Dialog>
       <Dialog onOpenChange={setIsCorruptionInfoOpen} open={isCorruptionInfoOpen}>

@@ -19,6 +19,7 @@ const INPUT_CLASS =
 interface ActionElementDialogProps {
   availableTags: string[]
   element?: ActionElement
+  initialTags: string[]
   onOpenChange: (open: boolean) => void
   onSave: (element: ActionElement) => Promise<void>
   open: boolean
@@ -56,7 +57,7 @@ function ActionElementDialog(props: ActionElementDialogProps) {
     setTitle(props.element?.title ?? '')
     setEmoji(props.element?.emoji ?? '')
     setTagInput('')
-    setTags(props.element?.tags ?? [])
+    setTags(props.element?.tags ?? props.initialTags)
     setImage(props.element?.image)
     setImageUrl(props.element?.imageUrl ?? '')
     setErrorMessage('')
@@ -82,7 +83,12 @@ function ActionElementDialog(props: ActionElementDialogProps) {
   }
 
   function handleTagChange(event: ChangeEvent<HTMLInputElement>) {
-    setTagInput(event.target.value)
+    const value = event.target.value
+    if (props.availableTags.includes(value.trim())) {
+      addTag(value)
+      return
+    }
+    setTagInput(value)
   }
 
   function addTag(tagValue: string) {
