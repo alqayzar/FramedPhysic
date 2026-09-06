@@ -6,6 +6,7 @@ import { mastermindAtout } from '@/lib/atouts/mastermind-atout'
 import { saboteurAtout } from '@/lib/atouts/saboteur-atout'
 import innocentIcon from '@/assets/roles/innocent.svg?url'
 import saboteurIcon from '@/assets/roles/saboteur.svg?url'
+import { protectionAtout } from './atouts/protection-atout'
 
 const GAME_PLAYERS_KEY = 'game-players'
 const GAME_ACTIVE_PLAYER_KEY = 'game-active-player'
@@ -104,6 +105,7 @@ export const GAME_ATOUTS: GameAtoutDefinition[] = [
   loupeAtout,
   mastermindAtout,
   saboteurAtout,
+  protectionAtout,
 ]
 
 export type AtoutId = (typeof GAME_ATOUTS)[number]['id']

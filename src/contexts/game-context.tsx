@@ -19,8 +19,8 @@ import {
   setElementProfiles as persistElementProfiles,
   type GameProfile,
 } from '@/lib/game-profiles'
-
-const SABOTEUR_CORRUPTED_ACTION_VALUE_KEY = 'saboteur-corrupted-action-id'
+import { SABOTEUR_CORRUPTED_ACTION_VALUE_KEY } from '@/lib/atouts/saboteur-atout'
+import { PROTECTION_ACTION_VALUE_KEY } from '@/lib/atouts/protection-atout'
 
 interface GameContextValue {
   actionElements: ActionElement[]
@@ -391,21 +391,24 @@ function GameProvider(props: GameProviderProps) {
   }
 
   function startGameRound(roundDuration: number, turnDuration: number, roundLossDuration: number) {
-    const now = Date.now()
-    const corruptedActionId = getValue<string | null>(SABOTEUR_CORRUPTED_ACTION_VALUE_KEY, null)
-    const totalActionCount = gamePlayers.filter((player) => !player.eliminated).reduce((total, player) => total + (player.actions?.length ?? 0), 0)
-    const isRoundWon = isVoting && selectedVotingActionIds.length >= Math.ceil(totalActionCount / 2)
-    const hasLostRound = isVoting && !isRoundWon
-    const nextRoundLossPenalty = hasLostRound ? roundLossPenalty + roundLossDuration : 0
-    const roundEndsAt = now + (Math.max(0, roundDuration - nextRoundLossPenalty) * 1000)
-    const turnEndsAt = now + (turnDuration * 1000)
-    const playersWithCorruption = isRoundWon && corruptedActionId && selectedVotingActionIds.includes(corruptedActionId)
-      ? gamePlayers.map((player) => player.role.name !== GAME_ROLES[1].name && player.actions?.some((action) => action.id === corruptedActionId) ? { ...player, corrupted: true } : player)
-      : gamePlayers
-    const remainingInnocentPlayers = playersWithCorruption.filter((player) => player.role.name !== GAME_ROLES[1].name && !player.eliminated)
+    const now = Date.now();
+    const corruptedActionId = getValue<string | null>(SABOTEUR_CORRUPTED_ACTION_VALUE_KEY, null);
+    const protectedPlayerId = getValue<string | null>(PROTECTION_ACTION_VALUE_KEY, null);
+    const corruptedActionOwnerId = corruptedActionId ? gamePlayers.find((player) => player.actions?.some((action) => action.id === corruptedActionId))?.id : undefined;
+    const effectiveCorruptedActionId = corruptedActionId && protectedPlayerId && corruptedActionOwnerId === protectedPlayerId ? null : corruptedActionId;
+    const totalActionCount = gamePlayers.filter((player) => !player.eliminated).reduce((total, player) => total + (player.actions?.length ?? 0), 0);
+    const isRoundWon = isVoting && selectedVotingActionIds.length >= Math.ceil(totalActionCount / 2);
+    const hasLostRound = isVoting && !isRoundWon;
+    const nextRoundLossPenalty = hasLostRound ? roundLossPenalty + roundLossDuration : 0;
+    const roundEndsAt = now + (Math.max(0, roundDuration - nextRoundLossPenalty) * 1000);
+    const turnEndsAt = now + (turnDuration * 1000);
+    const playersWithCorruption = isRoundWon && effectiveCorruptedActionId && selectedVotingActionIds.includes(effectiveCorruptedActionId)
+      ? gamePlayers.map((player) => player.role.name !== GAME_ROLES[1].name && player.actions?.some((action) => action.id === effectiveCorruptedActionId) ? { ...player, corrupted: true } : player)
+      : gamePlayers;
+    const remainingInnocentPlayers = playersWithCorruption.filter((player) => player.role.name !== GAME_ROLES[1].name && !player.eliminated);
     const nextWinnerIds = remainingInnocentPlayers.every((player) => player.corrupted)
       ? playersWithCorruption.filter((player) => player.role.name === GAME_ROLES[1].name).map((player) => player.id)
-      : []
+      : [];
 
     if (nextWinnerIds.length > 0) {
       setGamePlayers(playersWithCorruption)
