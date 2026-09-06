@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type Mou
 import { ActionTemplatePreview } from '@/components/actions/action-template-preview'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { validateActionTemplate } from '@/lib/action-template'
+import { parseActionTemplate, validateActionTemplate } from '@/lib/action-template'
 import { createGameAction, type GameAction } from '@/lib/game-actions'
-import { Braces, Copy, Tag, Trash2 } from 'lucide-react'
+import { Braces, CircleHelp, Copy, Hash, Tag, Trash2 } from 'lucide-react'
 
 interface ActionDialogProps {
   action?: GameAction
@@ -23,6 +23,7 @@ function ActionDialog(props: ActionDialogProps) {
   const [template, setTemplate] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isSyntaxDialogOpen, setIsSyntaxDialogOpen] = useState(false)
 
   useEffect(() => {
     if (!props.open) return
@@ -53,15 +54,19 @@ function ActionDialog(props: ActionDialogProps) {
 
   function handleTagInsert(event: MouseEvent<HTMLButtonElement>) {
     const tag = event.currentTarget.dataset.tag
+    if (tag) insertFilterTerm(tag)
+  }
+
+  function insertFilterTerm(term: string) {
     const input = templateInput.current
-    if (!tag || !input) return
+    if (!input) return
 
     const start = input.selectionStart
     const end = input.selectionEnd
     const before = template.slice(0, start)
     const after = template.slice(end)
     const isInsideFilter = before.lastIndexOf('{') > before.lastIndexOf('}')
-    const insertion = isInsideFilter ? tag : `{${tag}}`
+    const insertion = isInsideFilter ? term : `{${term}}`
     const nextTemplate = `${before}${insertion}${after}`
 
     setTemplate(nextTemplate)
@@ -105,6 +110,8 @@ function ActionDialog(props: ActionDialogProps) {
     handleOpenChange(false)
   }
 
+  const availableLabels = [...new Set(parseActionTemplate(template).flatMap((segment) => segment.type === 'filter' && segment.label ? [segment.label] : []))]
+
   return (
     <Dialog onOpenChange={handleOpenChange} open={props.open}>
       <DialogContent className="flex h-[calc(100svh-2rem)] w-[calc(100svw-2rem)] max-h-[calc(100svh-2rem)] max-w-[calc(100svw-2rem)] flex-col gap-0 overflow-hidden rounded-2xl border-4 border-game-ink bg-white p-5 text-game-ink shadow-[0_8px_0_0_#16171d] sm:w-full sm:max-w-xl sm:p-7">
@@ -115,7 +122,7 @@ function ActionDialog(props: ActionDialogProps) {
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-4">
-          <form className="mt-4" onSubmit={handleSubmit}>
+          <form className="mt-4 flex flex-col gap-3" onSubmit={handleSubmit}>
             <label className="grid gap-2 text-sm font-bold">
               Titre optionnel
               <input
@@ -125,8 +132,13 @@ function ActionDialog(props: ActionDialogProps) {
                 value={title}
               />
             </label>
-            <label className="mt-5 grid gap-2 text-sm font-bold">
-              Action
+            <label className="grid gap-2 text-sm font-bold">
+              <span className="flex items-center gap-2">
+                Action
+                <button aria-label="Afficher la syntaxe des filtres" className="rounded-full text-game-purple hover:text-game-blue" onClick={() => setIsSyntaxDialogOpen(true)} type="button">
+                  <CircleHelp aria-hidden="true" className="size-5" />
+                </button>
+              </span>
               <textarea
                 className="min-h-32 w-full resize-y rounded-xl border-4 border-game-ink px-3 py-3 text-base font-semibold shadow-[0_4px_0_0_#16171d] outline-none transition-transform placeholder:text-game-ink/50 focus:translate-y-[2px] focus:shadow-[0_2px_0_0_#16171d] focus:ring-4 focus:ring-game-blue/30"
                 onChange={handleTemplateChange}
@@ -136,64 +148,69 @@ function ActionDialog(props: ActionDialogProps) {
               />
             </label>
 
-            {props.availableTags.length > 0 && (
-              <section className="mt-5" aria-labelledby="available-tags-title">
-                <div className="flex items-center gap-2">
-                  <Tag aria-hidden="true" className="size-4 text-game-purple" />
-                  <h3 id="available-tags-title" className="text-sm font-black">Tags existants</h3>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {[[" ET ", "ET"], [" OU ", "OU"], ['-', '-'], ["=", "="]].map(operator => (
-                    <button
-                      className="rounded-full border-2 border-game-ink bg-white px-3 py-1.5 text-sm font-bold text-game-ink hover:bg-game-blue hover:text-white"
-                      data-tag={operator[0]}
-                      key={operator[0]}
-                      onClick={handleTagInsert}
-                      type="button"
-                    >
-                      {operator[1]}
-                    </button>
-                  ))}
-                  {props.availableTags.map((tag) => (
-                    <button
-                      className="rounded-full border-2 border-game-ink bg-white px-3 py-1.5 text-sm font-bold text-game-ink hover:bg-game-blue hover:text-white"
-                      data-tag={tag}
-                      key={tag}
-                      onClick={handleTagInsert}
-                      type="button"
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <section className="mt-6" aria-labelledby="syntax-title">
+            <section className="flex flex-col gap-2" aria-labelledby="available-tags-title">
               <div className="flex items-center gap-2">
-                <Braces aria-hidden="true" className="size-5 text-game-purple" />
-                <h3 id="syntax-title" className="text-base font-black">Syntaxe des filtres</h3>
+                <Tag aria-hidden="true" className="size-4 text-game-purple" />
+                <h3 id="available-tags-title" className="text-sm font-black">Tags existants</h3>
               </div>
-              <p className="mt-2 text-sm leading-6 text-game-ink/70">
-                 <code className="font-bold text-game-purple">{'{tag1 OU tag2}'}</code> accepte tag1 ou tag2.{' '}
-                 <code className="font-bold text-game-purple">{'{tag1 ET tag3 OU tag2}'}</code> accepte tag1 avec tag3, ou tag2.{' '}
-                 <code className="font-bold text-game-purple">{'{tag1 ET -tag2}'}</code> accepte tag1 sans tag2.
-                 <br />
-                 <code className="font-bold text-game-purple">{'{objet=tag1}'}</code> mémorise l’élément choisi, puis <code className="font-bold text-game-purple">{'{=objet}'}</code> réutilise exactement cet élément.
-              </p>
+              <div className="flex flex-wrap gap-2">
+                {[[" ET ", "ET"], [" OU ", "OU"], ['-', '-'], ["=", "="]].map(operator => (
+                  <button
+                    className="rounded-full border-2 border-game-ink bg-white px-3 py-1.5 text-sm font-bold text-game-ink hover:bg-game-blue hover:text-white"
+                    data-tag={operator[0]}
+                    key={operator[0]}
+                    onClick={handleTagInsert}
+                    type="button"
+                  >
+                    {operator[1]}
+                  </button>
+                ))}
+                {props.availableTags.map((tag) => (
+                  <button
+                    className="rounded-full border-2 border-game-ink bg-white px-3 py-1.5 text-sm font-bold text-game-ink hover:bg-game-blue hover:text-white"
+                    data-tag={tag}
+                    key={tag}
+                    onClick={handleTagInsert}
+                    type="button"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+              {availableLabels.length > 0 && (
+                <section className="flex flex-wrap flex-col gap-2" aria-labelledby="available-labels-title">
+                  <div className="flex items-center gap-2">
+                    <Hash aria-hidden="true" className="size-4 text-game-purple" />
+                    <h3 id="available-tags-title" className="text-sm font-black">Labels existants</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {availableLabels.map((label) => (
+                      <button
+                        className="rounded-full border-2 border-game-ink bg-white px-3 py-1.5 text-sm font-bold text-game-ink hover:bg-game-blue hover:text-white"
+                        data-tag={`#${label}`}
+                        key={label}
+                        onClick={handleTagInsert}
+                        type="button"
+                      >
+                        #{label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
             </section>
 
-            <section className="mt-6 rounded-xl border-2 border-game-ink bg-game-yellow/35 p-4" aria-labelledby="preview-title">
+            <section className="rounded-xl border-2 border-game-ink bg-game-yellow/35 p-4" aria-labelledby="preview-title">
               <h3 id="preview-title" className="text-sm font-black">Aperçu</h3>
               <div className="mt-2">
                 <ActionTemplatePreview template={template} />
               </div>
             </section>
 
-            {errorMessage && <p className="mt-4 font-bold text-red-700">{errorMessage}</p>}
+            {errorMessage && <p className="font-bold text-red-700">{errorMessage}</p>}
 
             {props.action && (
-              <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   className="cartoon-press h-auto rounded-xl border-4 border-game-ink bg-game-green px-4 py-3 font-black text-white hover:bg-game-green"
                   onClick={handleDuplicate}
@@ -214,7 +231,7 @@ function ActionDialog(props: ActionDialogProps) {
             )}
 
             <Button
-              className="cartoon-press mt-3 h-auto w-full rounded-xl border-4 border-game-ink bg-game-green px-5 py-3 text-base font-black text-white hover:bg-game-green"
+              className="cartoon-press h-auto w-full rounded-xl border-4 border-game-ink bg-game-green px-5 py-3 text-base font-black text-white hover:bg-game-green"
               disabled={isSaving}
               type="submit"
             >
@@ -222,7 +239,21 @@ function ActionDialog(props: ActionDialogProps) {
             </Button>
           </form>
         </div>
-      </DialogContent>
+        <Dialog onOpenChange={setIsSyntaxDialogOpen} open={isSyntaxDialogOpen}>
+          <DialogContent className="w-[calc(100svw-2rem)] max-w-[calc(100svw-2rem)] rounded-2xl border-4 border-game-ink bg-white p-6 text-game-ink shadow-[0_8px_0_0_#16171d] sm:max-w-md">
+            <DialogHeader className="pr-10">
+              <DialogTitle className="flex items-center gap-2 text-2xl font-black tracking-[-0.04em]"><Braces aria-hidden="true" className="size-5 text-game-purple" />Syntaxe des filtres</DialogTitle>
+            </DialogHeader>
+            <p className="mt-3 text-sm font-bold leading-6 text-game-ink/70">
+              <code className="font-bold text-game-purple">{'{tag1 OU tag2}'}</code> accepte tag1 ou tag2.{' '}
+              <code className="font-bold text-game-purple">{'{tag1 ET tag3 OU tag2}'}</code> accepte tag1 avec tag3, ou tag2.{' '}
+              <code className="font-bold text-game-purple">{'{tag1 ET -tag2}'}</code> accepte tag1 sans tag2. <code className="font-bold text-game-purple">{'-#label'}</code> exclut les éléments mémorisés sous label.
+              <br />
+              <code className="font-bold text-game-purple">{'{objet=tag1}'}</code> mémorise l’élément choisi sous objet, puis <code className="font-bold text-game-purple">{'{#objet}'}</code> choisit un élément mémorisé sous objet. Plusieurs éléments peuvent être mémorisés sous le même label ; le filtre en choisit un au hasard.
+            </p>
+          </DialogContent>
+        </Dialog>
+        </DialogContent>
     </Dialog>
   )
 }

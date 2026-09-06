@@ -6,7 +6,6 @@ export interface ActionFilter {
 export type ActionTemplateSegment =
   | { type: 'text'; value: string }
   | { filter: ActionFilter; label?: string; type: 'filter' }
-  | { label: string; type: 'reference' }
 
 export type GeneratedActionSegment =
   | { type: 'text'; value: string }
@@ -27,8 +26,6 @@ function parseFilter(raw: string): ActionFilter {
 
 function parseFilterSegment(raw: string): ActionTemplateSegment {
   const trimmedRaw = raw.trim()
-  if (trimmedRaw.startsWith('=')) return { label: trimmedRaw.slice(1).trim(), type: 'reference' }
-
   const labelSeparatorIndex = trimmedRaw.indexOf('=')
   if (labelSeparatorIndex === -1) return { filter: parseFilter(trimmedRaw), type: 'filter' }
 
@@ -71,18 +68,10 @@ export function validateActionTemplate(template: string): string | undefined {
   }
   if (depth > 0) return 'Une ou plusieurs accolades fermantes sont manquantes.'
 
-  const labels = new Set<string>()
   for (const segment of parseActionTemplate(template)) {
-    if (segment.type === 'reference') {
-      if (!segment.label) return 'Une référence doit avoir un label.'
-      if (!labels.has(segment.label)) return `Le label ${segment.label} doit être défini avant d’être réutilisé.`
-      continue
-    }
     if (segment.type !== 'filter') continue
     if (segment.label !== undefined) {
       if (!segment.label) return 'Un label doit avoir un nom.'
-      if (labels.has(segment.label)) return `Le label ${segment.label} est déjà utilisé.`
-      labels.add(segment.label)
     }
     if (!segment.filter.raw.trim()) return 'Un filtre entre accolades ne peut pas être vide.'
     if (segment.filter.alternatives.some((alternative) => alternative.length === 0)) {
@@ -91,31 +80,36 @@ export function validateActionTemplate(template: string): string | undefined {
     if (segment.filter.alternatives.some((alternative) => alternative.some((tag) => tag === '-'))) {
       return 'Un tag exclu doit avoir un nom.'
     }
+    if (segment.filter.alternatives.some((alternative) => alternative.some((tag) => tag === '#' || tag === '-#'))) {
+      return 'Un label doit avoir un nom.'
+    }
   }
 
   return undefined
 }
 
 export function generateActionPreview(template: string, elements: ActionElement[]): GeneratedActionSegment[] {
-  const labeledElements = new Map<string, ActionElement>()
+  const labeledElements = new Map<string, ActionElement[]>()
 
   return parseActionTemplate(template)
     .map((segment) => {
       if (segment.type === 'text') return segment.value
-      if (segment.type === 'reference') {
-        const element = labeledElements.get(segment.label)
-        return element ? { element, type: 'element' as const } : { type: 'unmatched' as const, value: `N/A =${segment.label}` }
-      }
 
       const matchingElements = elements.filter((element) =>
         segment.filter.alternatives.some((alternative) => alternative.every((tag) => (
-          tag.startsWith('-') ? !element.tags.includes(tag.slice(1)) : element.tags.includes(tag)
+          tag.startsWith('-')
+            ? tag.startsWith('-#')
+              ? !labeledElements.get(tag.slice(2))?.some((labeledElement) => labeledElement.id === element.id)
+              : !element.tags.includes(tag.slice(1))
+            : tag.startsWith('#')
+              ? labeledElements.get(tag.slice(1))?.some((labeledElement) => labeledElement.id === element.id)
+              : element.tags.includes(tag)
         ))),
       )
       const selectedElement = matchingElements[Math.floor(Math.random() * matchingElements.length)]
 
       if (selectedElement) {
-        if (segment.label) labeledElements.set(segment.label, selectedElement)
+        if (segment.label) labeledElements.set(segment.label, [...(labeledElements.get(segment.label) ?? []), selectedElement])
         return { element: selectedElement, type: 'element' as const }
       }
       return { type: 'unmatched' as const, value: `N/A ${segment.filter.raw}` }

@@ -29,7 +29,7 @@ interface AtoutControlButtonGroup extends GameAtoutButtonGroup {
 }
 
 function GameBoard(props: GameBoardProps) {
-  const { activePlayerId, eliminateGamePlayer, endGameRound, finishGameRound, gamePlayers, gameSettings, getValue, isVoting, reassignGameRoles, replaceGamePlayers, roundEndsAt, roundNumber, selectActivePlayer, selectedVotingActionIds, setValue, setVotingActionSelected, startGameRound, turnEndsAt, winnerIds, winningMessage } = useGame()
+  const { activePlayerId, eliminateGamePlayer, endGameRound, finishGameRound, gamePlayers, gameSettings, getValue, isVoting, reassignGameRoles, replaceGamePlayers, roundEndsAt, roundNumber, selectActivePlayer, selectedVotingActionIds, setRoundTotalTime, setTurnTotalTime, setValue, setVotingActionSelected, startGameRound, turnEndsAt, winnerIds, winningMessage } = useGame()
   const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false)
   const [isRoleSelectionEnabled, setIsRoleSelectionEnabled] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>()
@@ -259,7 +259,7 @@ function GameBoard(props: GameBoardProps) {
   }
 
   function confirmAtoutDialog() {
-    atoutDialog?.onOk?.()
+    if (atoutDialog?.onOk?.() === false) return
     setAtoutDialog(undefined)
   }
 
@@ -289,6 +289,8 @@ function GameBoard(props: GameBoardProps) {
       openDialog: openAtoutDialog,
       playerId,
       players: gamePlayers,
+      setRoundTotalTime,
+      setTurnTotalTime,
       setValue,
     }
   }
@@ -438,7 +440,7 @@ function GameBoard(props: GameBoardProps) {
           </>
         )}
         {(roundEndsAt || isVoting) && (
-          <button aria-label="Expliquer les joueurs corrompus" className="cartoon-press rounded-full border-2 border-game-ink bg-game-red px-2.5 py-1 text-sm font-black text-white hover:bg-game-red" onClick={() => setIsCorruptionInfoOpen(true)} type="button">
+          <button aria-label="Expliquer les joueurs corrompus" className="cartoon-press rounded-full border-2 border-game-ink bg-game-purple px-2.5 py-1 text-sm font-black text-white hover:bg-game-red" onClick={() => setIsCorruptionInfoOpen(true)} type="button">
             {corruptedPlayerCount}/{innocentPlayers.length} corrompus
           </button>
         )}

@@ -29,13 +29,15 @@ export interface GameAtoutContext {
   openDialog: (options: GameAtoutDialogOptions) => void
   playerId: string
   players: GamePlayer[]
+  setRoundTotalTime: (seconds: number) => void
+  setTurnTotalTime: (seconds: number) => void
   setValue: <Value>(key: string, value: Value) => void
 }
 
 export interface GameAtoutDialogOptions {
   content?: ReactNode
   onCancel?: () => void
-  onOk?: () => void
+  onOk?: () => boolean | void
   title?: ReactNode
 }
 

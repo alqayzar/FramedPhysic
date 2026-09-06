@@ -67,6 +67,8 @@ interface GameContextValue {
   isVoting: boolean
   selectedVotingActionIds: string[]
   setVotingActionSelected: (actionId: string, isSelected: boolean) => void
+  setRoundTotalTime: (seconds: number) => void
+  setTurnTotalTime: (seconds: number) => void
   clearGamePlayers: () => Promise<void>
   endGameRound: () => Promise<void>
   finishGameRound: () => Promise<void>
@@ -465,6 +467,22 @@ function GameProvider(props: GameProviderProps) {
     void persistGameTurnEndsAt(turnEndsAt)
   }
 
+  function setRoundTotalTime(seconds: number) {
+    if (!roundEndsAt) return
+
+    const nextRoundEndsAt = Date.now() + (Math.max(0, seconds) * 1000)
+    setRoundEndsAt(nextRoundEndsAt)
+    void persistGameRoundEndsAt(nextRoundEndsAt)
+  }
+
+  function setTurnTotalTime(seconds: number) {
+    if (!turnEndsAt) return
+
+    const nextTurnEndsAt = Date.now() + (Math.max(0, seconds) * 1000)
+    setTurnEndsAt(nextTurnEndsAt)
+    void persistGameTurnEndsAt(nextTurnEndsAt)
+  }
+
   function setVotingActionSelected(actionId: string, isSelected: boolean) {
     const nextActionIds = isSelected
       ? [...new Set([...selectedVotingActionIds, actionId])]
@@ -725,6 +743,8 @@ function GameProvider(props: GameProviderProps) {
         isVoting,
         selectedVotingActionIds,
         setVotingActionSelected,
+        setRoundTotalTime,
+        setTurnTotalTime,
         clearGamePlayers,
         endGameRound,
         finishGameRound,
