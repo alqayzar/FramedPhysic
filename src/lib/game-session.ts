@@ -112,6 +112,7 @@ export type AtoutId = (typeof GAME_ATOUTS)[number]['id']
 
 export const atoutRelations: Partial<Record<AtoutId, AtoutId[]>> = {
   loupe: [],
+  protection: [],
   mastermind: [],
   saboteur: [],
 }
