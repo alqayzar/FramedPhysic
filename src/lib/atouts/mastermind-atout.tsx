@@ -110,7 +110,7 @@ export const mastermindAtout: GameAtoutDefinition = {
   id: 'mastermind',
   name: 'Mastermind',
   icon: icon,
-  description: 'Utilisable une fois par tour, affiche les éléments actuellement en jeu.',
+  description: `Utilisable une fois par tour, permet de trouver les éléments présents dans l’action corrompue.`,
   appliesToAllPlayers: true,
   onTurnStart: (context) => {
     context.enableAbility([context.playerId, context.atoutId, 'Utiliser'], true);
