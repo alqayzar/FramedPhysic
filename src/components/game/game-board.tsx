@@ -406,7 +406,12 @@ function GameBoard(props: GameBoardProps) {
       <div className="flex flex-row flex-wrap gap-3">
         <Button className="cartoon-press flex-1 rounded-xl border-4 border-game-ink bg-game-red px-5 py-3 font-black text-white hover:bg-game-red" onClick={isVictory ? quitVictory : openQuitDialog} type="button">Quitter</Button>
         {!isVictory && !roundEndsAt && !isVoting && (
-          <Button aria-label="Réattribuer les rôles aléatoirement" className="cartoon-press flex-1 rounded-xl border-4 border-game-ink bg-game-blue px-5 py-3 font-black text-white hover:bg-game-blue" onClick={reassignGameRoles} type="button">
+          <Button
+            aria-label="Réattribuer les rôles aléatoirement"
+            className="cartoon-press flex-1 rounded-xl border-4 border-game-ink bg-game-blue px-5 py-3 font-black text-white hover:bg-game-blue"
+            onClick={reassignGameRoles}
+            type="button"
+          >
             <RefreshCw aria-hidden="true" className="size-5" />
             Réassigner
           </Button>
