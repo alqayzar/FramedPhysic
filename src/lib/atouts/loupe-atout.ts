@@ -7,7 +7,9 @@ export const loupeAtout: GameAtoutDefinition = {
   description: 'Utilisable une fois par manche, permet de découvrir si un joueur est corrompu.',
   icon: loupeIcon,
   onRoundStart: (context) => {
-    context.enableAbility([context.playerId, context.atoutId, 'Utiliser'], true);
+    context.enableAbility([context.playerId, context.atoutId, 'Utiliser'],
+      !context.players.find(p => p.id === context.playerId)?.corrupted
+    );
   },
   abilities: [{
     label: 'Utiliser',
