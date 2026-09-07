@@ -18,6 +18,8 @@ export interface ActionCountRange {
 }
 
 export interface GameSettings {
+  activeActionProfileId?: string
+  activeElementProfileId?: string
   roundLossTimeout: TimeoutSettings
   roundTimeout: TimeoutSettings
   turnTimeout: TimeoutSettings
@@ -41,6 +43,8 @@ export async function getGameSettings(): Promise<GameSettings> {
   const settings = await idbGet<Partial<GameSettings>>(GAME_SETTINGS_KEY)
 
   return {
+    activeActionProfileId: settings?.activeActionProfileId,
+    activeElementProfileId: settings?.activeElementProfileId,
     roundLossTimeout: { ...DEFAULT_GAME_SETTINGS.roundLossTimeout, ...settings?.roundLossTimeout },
     roundTimeout: { ...DEFAULT_GAME_SETTINGS.roundTimeout, ...settings?.roundTimeout },
     turnTimeout: { ...DEFAULT_GAME_SETTINGS.turnTimeout, ...settings?.turnTimeout },

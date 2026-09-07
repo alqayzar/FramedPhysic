@@ -25,10 +25,10 @@ function ElementsDialog(props: ElementsDialogProps) {
   const [isElementDialogOpen, setIsElementDialogOpen] = useState(false)
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false)
   const [editingElement, setEditingElement] = useState<ActionElement>()
-  const [activeProfileId, setActiveProfileId] = useState<string>()
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
   const {
     actionElements,
+    activeElementProfileId,
     actionElementsError,
     addActionElement,
     addElementProfile,
@@ -39,17 +39,20 @@ function ElementsDialog(props: ElementsDialogProps) {
     elementProfiles,
     exportElementProfile,
     importElementProfile,
+    isGameSettingsLoaded,
     updateActionElement,
     updateElementProfile,
+    setActiveElementProfileId,
   } = useGame()
 
   useEffect(() => {
-    if (!elementProfiles.some((profile) => profile.id === activeProfileId)) setActiveProfileId(elementProfiles[0]?.id)
-  }, [activeProfileId, elementProfiles])
+    if (!isGameSettingsLoaded) return
+    if (!elementProfiles.some((profile) => profile.id === activeElementProfileId)) setActiveElementProfileId(elementProfiles[0]?.id)
+  }, [activeElementProfileId, elementProfiles, isGameSettingsLoaded])
 
   useEffect(() => {
     setSelectedTags(new Set())
-  }, [activeProfileId])
+  }, [activeElementProfileId])
 
   function handleOpenChange(open: boolean) {
     props.onOpenChange(open)
@@ -57,7 +60,7 @@ function ElementsDialog(props: ElementsDialogProps) {
   }
 
   function openCreateDialog() {
-    if (!activeProfileId) return
+    if (!activeElementProfileId) return
     setEditingElement(undefined)
     setIsElementDialogOpen(true)
   }
@@ -71,7 +74,7 @@ function ElementsDialog(props: ElementsDialogProps) {
   }
 
   function handleProfileSelect(profileId: string) {
-    setActiveProfileId(profileId)
+    setActiveElementProfileId(profileId)
   }
 
   function handleTagFilterClick(event: MouseEvent<HTMLButtonElement>) {
@@ -114,7 +117,7 @@ function ElementsDialog(props: ElementsDialogProps) {
     setSelectedTags(new Set())
   }
 
-  const profileElements = actionElements.filter((element) => element.profileId === activeProfileId)
+  const profileElements = actionElements.filter((element) => element.profileId === activeElementProfileId)
   const profileTags = getExistingTags(profileElements)
   const filteredElements = profileElements.filter((element) => [...selectedTags].every((tag) => element.tags.includes(tag)))
 
@@ -129,7 +132,7 @@ function ElementsDialog(props: ElementsDialogProps) {
 
         <div className="flex flex-col gap-3 shrink-0">
           <ProfileTabs
-            activeProfileId={activeProfileId}
+            activeProfileId={activeElementProfileId}
             contentLabel="éléments"
             onAdd={openProfileDialog}
             onClear={clearFilteredElements}
@@ -142,7 +145,7 @@ function ElementsDialog(props: ElementsDialogProps) {
           />
           <Button
             className="cartoon-press h-auto w-full max-w-none rounded-xl border-4 border-game-ink bg-game-blue px-4 py-3 text-sm font-black text-white hover:bg-game-blue sm:px-5 sm:text-base"
-            disabled={!activeProfileId}
+              disabled={!activeElementProfileId}
             onClick={openCreateDialog}
             type="button"
           >
@@ -200,7 +203,7 @@ function ElementsDialog(props: ElementsDialogProps) {
           onOpenChange={handleElementDialogOpenChange}
           onSave={saveElement}
           open={isElementDialogOpen}
-          profileId={activeProfileId ?? ''}
+          profileId={activeElementProfileId ?? ''}
         />
         <ProfileDialog onCreate={addElementProfile} onOpenChange={handleProfileDialogOpenChange} open={isProfileDialogOpen} />
       </DialogContent>

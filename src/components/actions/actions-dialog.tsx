@@ -31,10 +31,11 @@ function ActionsDialog(props: ActionsDialogProps) {
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false)
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false)
   const [editingAction, setEditingAction] = useState<GameAction>()
-  const [activeProfileId, setActiveProfileId] = useState<string>()
   const [generatedAction, setGeneratedAction] = useState<GeneratedAction>()
   const {
     actionElements,
+    activeActionProfileId,
+    activeElementProfileId,
     actions,
     actionProfiles,
     actionsError,
@@ -46,13 +47,16 @@ function ActionsDialog(props: ActionsDialogProps) {
     duplicateAction,
     exportActionProfile,
     importActionProfile,
+    isGameSettingsLoaded,
     updateAction,
     updateActionProfile,
+    setActiveActionProfileId,
   } = useGame()
 
   useEffect(() => {
-    if (!actionProfiles.some((profile) => profile.id === activeProfileId)) setActiveProfileId(actionProfiles[0]?.id)
-  }, [actionProfiles, activeProfileId])
+    if (!isGameSettingsLoaded) return
+    if (!actionProfiles.some((profile) => profile.id === activeActionProfileId)) setActiveActionProfileId(actionProfiles[0]?.id)
+  }, [actionProfiles, activeActionProfileId, isGameSettingsLoaded])
 
   function handleOpenChange(open: boolean) {
     props.onOpenChange(open)
@@ -60,7 +64,7 @@ function ActionsDialog(props: ActionsDialogProps) {
   }
 
   function openCreateDialog() {
-    if (!activeProfileId) return
+    if (!activeActionProfileId) return
     setEditingAction(undefined)
     setIsActionDialogOpen(true)
   }
@@ -74,7 +78,7 @@ function ActionsDialog(props: ActionsDialogProps) {
   }
 
   function handleProfileSelect(profileId: string) {
-    setActiveProfileId(profileId)
+    setActiveActionProfileId(profileId)
   }
 
   function openEditor(action: GameAction) {
@@ -120,7 +124,7 @@ function ActionsDialog(props: ActionsDialogProps) {
 
     setGeneratedAction({
       id: crypto.randomUUID(),
-      segments: generateActionPreview(action.template, actionElements),
+      segments: generateActionPreview(action.template, actionElements.filter((element) => element.profileId === activeElementProfileId)),
       title: action.title || 'Action générée',
     })
   }
@@ -131,6 +135,8 @@ function ActionsDialog(props: ActionsDialogProps) {
     }
   }
 
+  const activeElements = actionElements.filter((element) => element.profileId === activeElementProfileId)
+
   return (
     <Dialog onOpenChange={handleOpenChange} open={props.open}>
       <DialogContent className="flex h-svh w-svw max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 bg-white p-5 text-game-ink shadow-none sm:p-8">
@@ -140,7 +146,7 @@ function ActionsDialog(props: ActionsDialogProps) {
 
         <div className="shrink-0">
           <ProfileTabs
-            activeProfileId={activeProfileId}
+            activeProfileId={activeActionProfileId}
             contentLabel="actions"
             onAdd={openProfileDialog}
             onClear={clearActionProfile}
@@ -154,7 +160,7 @@ function ActionsDialog(props: ActionsDialogProps) {
           <div className="mt-3 w-full min-w-0">
             <Button
               className="cartoon-press h-auto w-full max-w-none rounded-xl border-4 border-game-ink bg-game-green px-4 py-3 text-sm font-black text-white hover:bg-game-green sm:px-5 sm:text-base"
-              disabled={!activeProfileId}
+              disabled={!activeActionProfileId}
               onClick={openCreateDialog}
               type="button"
             >
@@ -168,7 +174,7 @@ function ActionsDialog(props: ActionsDialogProps) {
           {actionsError && <p className="mt-5 font-bold text-red-700">{actionsError}</p>}
 
           <div className="grid w-full gap-4">
-            {actions.filter((action) => action.profileId === activeProfileId).map((action) => (
+            {actions.filter((action) => action.profileId === activeActionProfileId).map((action) => (
               <article className="w-full rounded-2xl border-4 border-game-ink bg-white p-4 shadow-[0_5px_0_0_#16171d]" key={action.id}>
                 <div className="flex min-w-0 items-start gap-2">
                   <button
@@ -223,20 +229,20 @@ function ActionsDialog(props: ActionsDialogProps) {
             ))}
           </div>
 
-          {actions.filter((action) => action.profileId === activeProfileId).length === 0 && !isActionDialogOpen && (
+          {actions.filter((action) => action.profileId === activeActionProfileId).length === 0 && !isActionDialogOpen && (
             <p className="mt-12 text-center text-base font-bold text-game-ink/60">Aucune action pour le moment.</p>
           )}
         </div>
 
         <ActionDialog
-          availableTags={getExistingTags(actionElements)}
+          availableTags={getExistingTags(activeElements)}
           action={editingAction}
           onDelete={deleteEditingAction}
           onDuplicate={duplicateAction}
           onOpenChange={handleActionDialogOpenChange}
           onSave={saveAction}
           open={isActionDialogOpen}
-          profileId={activeProfileId ?? ''}
+          profileId={activeActionProfileId ?? ''}
         />
         <ProfileDialog onCreate={addActionProfile} onOpenChange={handleProfileDialogOpenChange} open={isProfileDialogOpen} />
         <Dialog onOpenChange={handleGeneratedActionOpenChange} open={Boolean(generatedAction)}>

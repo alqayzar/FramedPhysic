@@ -23,6 +23,8 @@ import { SABOTEUR_CORRUPTED_ACTION_VALUE_KEY } from '@/lib/atouts/saboteur-atout
 import { PROTECTION_ACTION_VALUE_KEY } from '@/lib/atouts/protection-atout'
 
 interface GameContextValue {
+  activeActionProfileId?: string
+  activeElementProfileId?: string
   actionElements: ActionElement[]
   actionProfiles: GameProfile[]
   addActionElement: (element: ActionElement) => Promise<void>
@@ -67,6 +69,8 @@ interface GameContextValue {
   isVoting: boolean
   selectedVotingActionIds: string[]
   setVotingActionSelected: (actionId: string, isSelected: boolean) => void
+  setActiveActionProfileId: (profileId: string | undefined) => void
+  setActiveElementProfileId: (profileId: string | undefined) => void
   setRoundTotalTime: (seconds: number) => void
   setTurnTotalTime: (seconds: number) => void
   clearGamePlayers: () => Promise<void>
@@ -249,6 +253,10 @@ function GameProvider(props: GameProviderProps) {
   }
 
   function generateGameActions(players: GamePlayer[]): GamePlayer[] {
+    const activeActionProfileId = gameSettings.activeActionProfileId ?? actionProfiles[0]?.id
+    const activeElementProfileId = gameSettings.activeElementProfileId ?? elementProfiles[0]?.id
+    const activeActions = actions.filter((action) => action.profileId === activeActionProfileId)
+    const activeElements = actionElements.filter((element) => element.profileId === activeElementProfileId)
     const minimum = Math.min(gameSettings.actionsPerPlayer.min, gameSettings.actionsPerPlayer.max)
     const maximum = Math.max(gameSettings.actionsPerPlayer.min, gameSettings.actionsPerPlayer.max)
     const assignedActionKeys = new Set<string>()
@@ -260,11 +268,11 @@ function GameProvider(props: GameProviderProps) {
       for (let index = 0; index < count; index += 1) {
         let generatedAction: GamePlayerAction | undefined
 
-        for (let attempt = 0; attempt < Math.max(actions.length * 10, 50); attempt += 1) {
-          const action = actions[Math.floor(Math.random() * actions.length)]
+        for (let attempt = 0; attempt < Math.max(activeActions.length * 10, 50); attempt += 1) {
+          const action = activeActions[Math.floor(Math.random() * activeActions.length)]
           if (!action) break
 
-          const segments = generateActionPreview(action.template, actionElements)
+          const segments = generateActionPreview(action.template, activeElements)
           const equalityKey = getGeneratedActionEqualityKey(segments)
           if (assignedActionKeys.has(equalityKey)) continue
 
@@ -494,6 +502,16 @@ function GameProvider(props: GameProviderProps) {
     void persistGameVotingActionIds(nextActionIds)
   }
 
+  function setActiveActionProfileId(profileId: string | undefined) {
+    if (gameSettings.activeActionProfileId === profileId) return
+    void saveGameSettings({ ...gameSettings, activeActionProfileId: profileId })
+  }
+
+  function setActiveElementProfileId(profileId: string | undefined) {
+    if (gameSettings.activeElementProfileId === profileId) return
+    void saveGameSettings({ ...gameSettings, activeElementProfileId: profileId })
+  }
+
   function replaceGamePlayers(players: GamePlayer[]) {
     setGamePlayers(players)
     void persistGamePlayers(players)
@@ -706,6 +724,8 @@ function GameProvider(props: GameProviderProps) {
     <GameContext.Provider
       value={{
         actionElements,
+        activeActionProfileId: gameSettings.activeActionProfileId,
+        activeElementProfileId: gameSettings.activeElementProfileId,
         actionProfiles,
         actionElementsError,
         addActionElement,
@@ -746,6 +766,8 @@ function GameProvider(props: GameProviderProps) {
         isVoting,
         selectedVotingActionIds,
         setVotingActionSelected,
+        setActiveActionProfileId,
+        setActiveElementProfileId,
         setRoundTotalTime,
         setTurnTotalTime,
         clearGamePlayers,
