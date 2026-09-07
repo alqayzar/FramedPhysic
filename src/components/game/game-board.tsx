@@ -15,6 +15,7 @@ import { GameRoleIcon } from '@/components/game/game-role-icon'
 import { GameAtoutIcon } from '@/components/game/game-atout-icon'
 import { useGame } from '@/contexts/game-context'
 import { GAME_ROLES, getGameAtout, type AtoutId, type GameAtout, type GameAtoutButtonGroup, type GameAtoutContext, type GameAtoutDialogOptions } from '@/lib/game-session'
+import { playTurnEndSound } from '@/lib/turn-sound'
 import { RefreshCw, Settings, UsersRound } from 'lucide-react'
 
 const ENABLED_ABILITIES_VALUE_KEY = '__enabled-abilities';
@@ -299,13 +300,18 @@ function GameBoard(props: GameBoardProps) {
     if (!open) setPendingPlayerId(undefined)
   }
 
+  function endTurn(nextPlayerId: string) {
+    const timeout = gameSettings.turnTimeout
+    playTurnEndSound()
+    runAtoutTurnEnd()
+    clearAtoutControls()
+    selectActivePlayer(nextPlayerId, (timeout.minutes * 60) + timeout.seconds)
+  }
+
   function confirmPlayerSelection() {
     if (!pendingPlayerId) return
 
-    const timeout = gameSettings.turnTimeout
-    runAtoutTurnEnd()
-    clearAtoutControls()
-    selectActivePlayer(pendingPlayerId, (timeout.minutes * 60) + timeout.seconds)
+    endTurn(pendingPlayerId)
     setPendingPlayerId(undefined)
   }
 
@@ -324,11 +330,8 @@ function GameBoard(props: GameBoardProps) {
     const nextPlayer = eligiblePlayers[Math.floor(Math.random() * eligiblePlayers.length)]
     if (!nextPlayer) return
 
-    const timeout = gameSettings.turnTimeout
     setSelectedActionPlayerId(undefined)
-    clearAtoutControls()
-    runAtoutTurnEnd()
-    selectActivePlayer(nextPlayer.id, (timeout.minutes * 60) + timeout.seconds)
+    endTurn(nextPlayer.id)
   }
 
   function openRoundEndDialog() {
